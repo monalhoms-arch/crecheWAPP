@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Enfants</h2>
+<a href="/enfants/add" class="btn btn-primary mb-3">Ajouter un enfant</a>
+<div class="list-group">
+  {% for e in enfants %}
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      <div>{{ e.nom }} — {{ e.age }} ans
+        {% if parents[e.parent_id] %}<br><small>Parent: {{ parents[e.parent_id] }}</small>{% endif %}
+      </div>
+      <a href="/enfants/delete/{{ e._id }}" class="btn btn-danger btn-sm">Supprimer</a>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

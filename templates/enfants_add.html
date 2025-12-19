@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<h3>Ajouter enfant</h3>
+<form method="POST">
+  <div class="mb-2"><input name="nom" class="form-control" placeholder="Nom" required></div>
+  <div class="mb-2"><input name="age" type="number" class="form-control" placeholder="Âge" required></div>
+  <div class="mb-2">
+    <select name="parent_id" class="form-control">
+      <option value="">-- Choisir parent (optionnel) --</option>
+      {% for p in parents %}<option value="{{ p._id }}">{{ p.nom }}</option>{% endfor %}
+    </select>
+  </div>
+  <button class="btn btn-success">Ajouter</button>
+</form>
+{% endblock %}

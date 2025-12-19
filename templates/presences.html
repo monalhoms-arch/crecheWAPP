@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Présences — {{ date }}</h2>
+<div class="card mb-3">
+  <div class="card-header">Marquer présence</div>
+  <div class="card-body">
+    <form method="POST" action="/presences/add" class="row g-2">
+      <div class="col-md-6">
+        
+        <select name="enfant_id" class="form-select">
+          {% for id, nom in enfants.items() %}
+            <option value="{{ id }}">{{ nom }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-4">
+        <select name="statut" class="form-select">
+          <option value="present">Présent</option>
+          <option value="absent">Absent</option>
+        </select>
+      </div>
+      <div class="col-md-2"><button class="btn btn-success w-100">Marquer</button></div>
+    </form>
+  </div>
+</div>
+<div class="list-group">
+  {% for p in presences %}
+    <div class="list-group-item d-flex justify-content-between">
+      <div>{{ p.nom_enfant }}</div>
+      <div><strong>{{ p.statut|upper }}</strong></div>
+    </div>
+  {% else %}
+    <p class="text-muted">Aucune présence pour cette date.</p>
+  {% endfor %}
+</div>
+{% endblock %}

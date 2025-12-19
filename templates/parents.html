@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Liste des parents</h2>
+<div class="card mb-3">
+  <div class="card-header">Ajouter parent</div>
+  <div class="card-body">
+    <form method="POST" action="/parents/add" class="row g-2">
+      <div class="col-md-4"><input class="form-control" name="nom" placeholder="Nom" required></div>
+      <div class="col-md-4"><input class="form-control" name="email" placeholder="Email"></div>
+      <div class="col-md-3"><input class="form-control" name="telephone" placeholder="Téléphone"></div>
+      <div class="col-md-1"><button class="btn btn-success w-100">Ajouter</button></div>
+    </form>
+  </div>
+</div>
+<div class="list-group">
+  {% for p in parents %}
+  <div class="list-group-item d-flex justify-content-between align-items-center">
+    <div><strong>{{ p.nom }}</strong><br><small>{{ p.email }}</small></div>
+    <div>
+      <a href="/parents/edit/{{ p._id }}" class="btn btn-warning btn-sm">Modifier</a>
+      <a href="/parents/delete/{{ p._id }}" class="btn btn-danger btn-sm">Supprimer</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="mb-3">Paiements</h2>
+<a href="/paiements/add" class="btn btn-primary mb-3">Ajouter paiement</a>
+<table class="table">
+  <thead><tr><th>Enfant</th><th>Montant</th><th>Date</th></tr></thead>
+  <tbody>
+    {% for p in paiements %}
+      <tr>
+        <td>{{ enfants[p.enfant_id] }}</td>
+        <td>{{ p.montant }} DA</td>
+        <td>{{ p.date.strftime('%Y-%m-%d') }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
