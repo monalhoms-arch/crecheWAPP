@@ -8,6 +8,7 @@ class Paiement:
     date: datetime = datetime.now()
     mode: str = "espece"
     statut: str = "paye" # paye, en_attente
+    chargily_payment_id: str = None
 
     def to_dict(self):
         d = asdict(self)

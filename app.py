@@ -1,7 +1,12 @@
 from flask import Flask, redirect, url_for, render_template
 from datetime import datetime
+from dotenv import load_dotenv
+import os
 
-# Controllers need to be imported AFTER app init generally if circular logic exists, 
+# Load environment variables from .env file
+load_dotenv()
+
+# Controllers need to be imported AFTER app init generally if circular logic exists,
 # but here specific blueprints are imported from controllers.
 
 from flask_login import LoginManager, login_required, current_user

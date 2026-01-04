@@ -94,8 +94,12 @@
                                     attente</span>
                                 {% if current_user.role == 'parent' %}
                                 <a href="{{ url_for('paiements_bp.pay_now', id=p._id) }}"
-                                    class="btn btn-sm btn-success rounded-pill px-3">
-                                    <i class="bi bi-credit-card me-1"></i>Payer
+                                    class="btn btn-sm btn-success rounded-pill px-3 shadow-sm mb-1">
+                                    <i class="bi bi-credit-card me-1"></i>Payer en ligne
+                                </a>
+                                <a href="{{ url_for('paiements_bp.pay_manual', id=p._id) }}"
+                                    class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm">
+                                    <i class="bi bi-cash-stack me-1"></i>Payer en espèces
                                 </a>
                                 {% endif %}
                                 {% else %}

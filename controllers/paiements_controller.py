@@ -7,6 +7,8 @@ from flask_login import login_required, current_user
 from db import db
 from models.paiement import Paiement
 from utils.decorators import admin_required
+import os
+import requests
 
 paiements_bp = Blueprint("paiements_bp", __name__, template_folder="../templates")
 
@@ -121,17 +123,104 @@ def download_invoice(invoice_number):
 @paiements_bp.route("/pay/<id>")
 @login_required
 def pay_now(id):
-    # Simulate payment process
     if current_user.role != 'parent':
         flash("Action non autorisée", "error")
         return redirect(url_for("paiements_bp.list_paiements"))
-        
+
+    paiement = db.paiements.find_one({"_id": ObjectId(id)})
+    if not paiement:
+        flash("Paiement introuvable", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+
+    # Chargily API configuration
+    chargily_api_key = os.getenv('CHARGILY_API_KEY')
+    chargily_secret_key = os.getenv('CHARGILY_SECRET_KEY')
+    chargily_url = 'https://pay.chargily.net/test/api/v2/checkouts'  # Test mode (use .net)
+
+    # Create checkout session
+    checkout_data = {
+        'amount': paiement['montant'],
+        'currency': 'dzd',  # Algerian Dinar
+        'success_url': url_for('paiements_bp.payment_success', id=id, _external=True),
+        'failure_url': url_for('paiements_bp.payment_failure', id=id, _external=True),
+        # webhook_url is removed because Chargily rejects localhost/127.0.0.1
+        'description': f'Paiement pour {paiement["enfant_id"]}',
+        'metadata': {'paiement_id': str(id)}
+    }
+
+    headers = {
+        'Authorization': f'Bearer {chargily_secret_key}',
+        'Content-Type': 'application/json'
+    }
+
+    try:
+        response = requests.post(chargily_url, json=checkout_data, headers=headers)
+        response.raise_for_status()
+        checkout = response.json()
+
+        # Store chargily_payment_id
+        db.paiements.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {"chargily_payment_id": checkout['id']}}
+        )
+        # Redirect to Chargily checkout URL
+        return redirect(checkout['checkout_url'])
+    except requests.exceptions.HTTPError as e:
+        error_msg = response.text if 'response' in locals() else str(e)
+        flash(f"Erreur lors de la création du paiement (Chargily): {error_msg}", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+    except requests.exceptions.RequestException as e:
+        flash(f"Erreur de connexion lors de la création du paiement: {str(e)}", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+
+@paiements_bp.route("/payment/success/<id>")
+@login_required
+def payment_success(id):
+    # Update payment status to paid
     db.paiements.update_one(
-        {"_id": ObjectId(id)}, 
-        {"$set": {"statut": "paye", "date": datetime.now(), "mode": "carte_simulated"}}
+        {"_id": ObjectId(id)},
+        {"$set": {"statut": "paye", "date": datetime.now(), "mode": "chargily"}}
     )
-    flash("Paiement effectué avec succès (Simulation)", "success")
+    flash("Paiement effectué avec succès via Chargily", "success")
     return redirect(url_for("paiements_bp.list_paiements"))
+
+@paiements_bp.route("/pay_manual/<id>")
+@login_required
+def pay_manual(id):
+    if current_user.role != 'parent':
+        flash("Action non autorisée", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+
+    paiement = db.paiements.find_one({"_id": ObjectId(id)})
+    if not paiement:
+        flash("Paiement introuvable", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+
+    # Update payment mode to espèce but keep status as pending
+    db.paiements.update_one(
+        {"_id": ObjectId(id)},
+        {"$set": {"mode": "espece", "statut": "en_attente"}}
+    )
+    
+    flash("Demande de paiement en espèces enregistrée. Veuillez vous présenter à l'administration pour finaliser le paiement.", "info")
+    return redirect(url_for("paiements_bp.list_paiements"))
+
+@paiements_bp.route("/payment/failure/<id>")
+@login_required
+def payment_failure(id):
+    flash("Paiement annulé ou échoué", "error")
+    return redirect(url_for("paiements_bp.list_paiements"))
+
+@paiements_bp.route("/payment/webhook/<id>", methods=["POST"])
+def payment_webhook(id):
+    # Handle webhook from Chargily
+    data = request.json
+    if data.get('status') == 'paid':
+        db.paiements.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {"statut": "paye", "date": datetime.now(), "mode": "chargily"}}
+        )
+    return '', 200
 
 @paiements_bp.route("/edit/<id>", methods=["POST"])
 @admin_required
@@ -140,16 +229,16 @@ def edit_paiement(id):
         enfant_id = request.form.get("enfant_id")
         montant = float(request.form.get("montant", 0))
         statut = request.form.get("statut")
-        
+
         update_data = {
             "enfant_id": enfant_id,
             "montant": montant,
             "statut": statut
         }
-        
+
         db.paiements.update_one({"_id": ObjectId(id)}, {"$set": update_data})
         flash("Paiement mis à jour avec succès", "success")
     except Exception as e:
         flash(f"Erreur lors de la modification: {str(e)}", "error")
-        
+
     return redirect(url_for("paiements_bp.list_paiements"))
