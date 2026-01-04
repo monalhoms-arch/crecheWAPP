@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestion des Groupes</h2>
+</div>
+
+{% if current_user.role == 'admin' %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="card-title mb-0 text-primary fw-bold">
+                    <i class="bi bi-plus-circle me-2"></i>Nouveau Groupe
+                </h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('groups_bp.add_group') }}" method="POST" class="d-grid gap-3">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">NOM DU GROUPE</label>
+                        <input type="text" name="nom" class="form-control" placeholder="ex. Les Petits-Poussins"
+                            required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label small text-muted fw-bold">CAPACITÉ</label>
+                            <input type="number" name="capacity" class="form-control" placeholder="ex. 15" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small text-muted fw-bold">AGE</label>
+                            <input type="text" name="age_range" class="form-control" placeholder="ex. 2-4" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">ÉDUCATEUR</label>
+                        <select name="educateur_id" class="form-select">
+                            <option value="">-- Sélectionner --</option>
+                            {% for ed in educateurs_list %}
+                            <option value="{{ ed._id }}">{{ ed.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2">Créer le groupe</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        {% else %}
+        <div class="row">
+            <div class="col-12">
+                {% endif %}
+
+                <div class="card border-0 shadow-sm">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Groupe</th>
+                                    <th>Capacité</th>
+                                    <th>Tranche d'âge</th>
+                                    <th>Éducateur</th>
+                                    {% if current_user.role == 'admin' %}
+                                    <th class="text-end pe-4">Actions</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for g in groups %}
+                                <tr>
+                                    <td class="ps-4 fw-bold text-primary">{{ g.nom }}</td>
+                                    <td><span class="badge bg-secondary bg-opacity-10 text-dark">{{ g.capacity }}
+                                            places</span></td>
+                                    <td>{{ g.age_range }} ans</td>
+                                    <td>
+                                        {% if educateurs.get(g.educateur_id) %}
+                                        <span class="badge bg-info bg-opacity-10 text-info">{{
+                                            educateurs.get(g.educateur_id) }}</span>
+                                        {% else %}
+                                        <span class="text-muted small">Non assigné</span>
+                                        {% endif %}
+                                    </td>
+                                    {% if current_user.role == 'admin' %}
+                                    <td class="text-end pe-4">
+                                        <a href="{{ url_for('groups_bp.delete_group', id=g._id) }}"
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Confirmer la suppression ?')">Supprimer</a>
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}

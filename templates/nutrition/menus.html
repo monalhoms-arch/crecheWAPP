@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestion des Menus</h2>
+</div>
+
+<div class="row">
+    {% if current_user.role == 'dietitian' %}
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 text-primary fw-bold" id="formTitle">
+                    <i class="bi bi-calendar-plus me-2" id="formIcon"></i><span id="formTitleText">Créer un menu</span>
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
+                    onclick="resetForm()">Annuler</button>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('nutrition_bp.manage_menus') }}" class="d-grid gap-3"
+                    id="menuForm">
+                    <input type="hidden" name="menu_id" id="menuId" value="">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">NOM DU MENU</label>
+                        <input type="text" name="name" id="menuName" class="form-control" placeholder="ex: Semaine 1"
+                            required>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <label class="form-label small text-muted fw-bold">DÉBUT</label>
+                            <input type="date" name="start_date" id="startDate" class="form-control" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label small text-muted fw-bold">FIN</label>
+                            <input type="date" name="end_date" id="endDate" class="form-control" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">REPAS</label>
+                        <select name="meal_ids" id="mealIds" class="form-control" multiple style="height: 120px;">
+                            {% for m in meals %}
+                            <option value="{{ m._id }}">{{ m.name }} ({{ m.type }})</option>
+                            {% endfor %}
+                        </select>
+                        <small class="text-muted">Maintenez Ctrl pour sélectionner plusieurs.</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2" id="submitBtn">Créer Menu</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="{% if current_user.role == 'dietitian' %}col-md-8{% else %}col-12{% endif %}">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="mb-0 fw-bold">Menus Existants</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for menu in menus %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 {% if current_user.role == 'dietitian' %}menu-card{% endif %}" {% if
+                            current_user.role=='dietitian' %}onclick='loadMenuForEdit({{ menu|tojson|safe }})'
+                            style="cursor: pointer;" {% endif %}>
+                            <div class="card-body">
+                                <h5 class="card-title">{{ menu.name }}</h5>
+                                <h6 class="card-subtitle mb-2 text-muted">
+                                    <i class="bi bi-calendar-range"></i> {{ menu.start_date }} au {{ menu.end_date }}
+                                </h6>
+                                <ul class="list-unstyled mt-3">
+                                    {% for meal in menu.meals %}
+                                    <li class="mb-2">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <i class="bi bi-check-circle text-success me-1"></i>
+                                                <span class="fw-bold">{{ meal.name }}</span>
+                                                <span class="badge bg-secondary ms-1">{{ meal.type }}</span>
+                                            </div>
+                                            {% if meal.calories %}
+                                            <span class="text-muted small"><i class="bi bi-fire text-warning"></i> {{
+                                                meal.calories }} kcal</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if meal.ingredients %}
+                                        <div class="ms-4 text-muted small mt-1" style="font-style: italic;">
+                                            <i class="bi bi-info-circle small"></i> {{ meal.ingredients }}
+                                        </div>
+                                        {% endif %}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                {% if current_user.role == 'dietitian' %}
+                                <div class="mt-3">
+                                    <button class="btn btn-sm btn-outline-danger"
+                                        onclick="deleteMenu('{{ menu._id }}', '{{ menu.name }}', event)">
+                                        <i class="bi bi-trash"></i> Supprimer
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-5 text-muted">
+                        Aucun menu disponible
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le menu <strong id="deleteMenuName"></strong> ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let menuIdToDelete = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    function deleteMenu(menuId, menuName, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        menuIdToDelete = menuId;
+        document.getElementById('deleteMenuName').textContent = menuName;
+        deleteModal.show();
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (menuIdToDelete) {
+            window.location.href = '/nutrition/menus/delete/' + menuIdToDelete;
+        }
+    });
+
+    function loadMenuForEdit(menu) {
+        // Prevent row click when clicking delete button
+        if (event && event.target.closest('button')) {
+            event.stopPropagation();
+            return;
+        }
+
+        // Populate form fields
+        document.getElementById('menuName').value = menu.name;
+        document.getElementById('startDate').value = menu.start_date;
+        document.getElementById('endDate').value = menu.end_date;
+
+        // Select meals
+        const mealSelect = document.getElementById('mealIds');
+        Array.from(mealSelect.options).forEach(option => {
+            option.selected = menu.meals.some(m => m._id === option.value);
+        });
+
+        // Update form action and title
+        document.getElementById('menuForm').action = '/nutrition/menus/edit/' + menu._id;
+        document.getElementById('formTitleText').textContent = 'Modifier le menu';
+        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
+        document.getElementById('submitBtn').textContent = 'Mettre à jour';
+        document.getElementById('submitBtn').className = 'btn btn-success mt-2';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+        // Scroll to form
+        document.querySelector('.card-header').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        // Reset form
+        document.getElementById('menuForm').reset();
+        document.getElementById('menuForm').action = '{{ url_for("nutrition_bp.manage_menus") }}';
+        document.getElementById('formTitleText').textContent = 'Créer un menu';
+        document.getElementById('formIcon').className = 'bi bi-calendar-plus me-2';
+        document.getElementById('submitBtn').textContent = 'Créer Menu';
+        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+</script>
+
+<style>
+    .menu-card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        transform: translateY(-2px);
+        transition: all 0.3s ease;
+    }
+</style>
+{% endblock %}

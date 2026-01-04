@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Boîte de réception</h2>
+<a href="{{ url_for('communication_bp.send_message') }}" class="btn btn-primary mb-3">Nouveau Message</a>
+
+<div class="list-group">
+    {% for msg in messages %}
+    <a href="#" class="list-group-item list-group-item-action">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ msg.subject }}</h5>
+            <small>{{ msg.timestamp }}</small>
+        </div>
+        <p class="mb-1">{{ msg.body }}</p>
+        <small>De: {{ msg.sender_id }}</small>
+    </a>
+    {% else %}
+    <p>Aucun message.</p>
+    {% endfor %}
+</div>
+{% endblock %}

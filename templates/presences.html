@@ -1,36 +1,115 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-3">Présences — {{ date }}</h2>
-<div class="card mb-3">
-  <div class="card-header">Marquer présence</div>
-  <div class="card-body">
-    <form method="POST" action="/presences/add" class="row g-2">
-      <div class="col-md-6">
-        
-        <select name="enfant_id" class="form-select">
-          {% for id, nom in enfants.items() %}
-            <option value="{{ id }}">{{ nom }}</option>
-          {% endfor %}
-        </select>
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Gestion des Présences</h2>
+  <div class="text-muted small">Date: {{ date }}</div>
+</div>
+
+<div class="row">
+  <!-- Filter / Add Section -->
+  <div class="col-md-4 mb-4">
+    <!-- Date Filter -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-body">
+        <form method="GET" class="d-flex gap-2">
+          <input type="date" name="date" class="form-control" value="{{ date }}">
+          <button class="btn btn-outline-primary"><i class="bi bi-filter"></i></button>
+        </form>
       </div>
-      <div class="col-md-4">
-        <select name="statut" class="form-select">
-          <option value="present">Présent</option>
-          <option value="absent">Absent</option>
-        </select>
+    </div>
+
+    {% if current_user.role == 'educateur' %}
+    <!-- Add Presence Form -->
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 text-primary fw-bold">
+          <i class="bi bi-calendar-check me-2"></i>Marquer présence
+        </h5>
       </div>
-      <div class="col-md-2"><button class="btn btn-success w-100">Marquer</button></div>
-    </form>
+      <div class="card-body">
+        <form method="POST" action="/presences/add" class="d-grid gap-3">
+          <input type="hidden" name="date" value="{{ date }}">
+          <div>
+            <label class="form-label small text-muted fw-bold">ENFANT</label>
+            <select name="enfant_id" class="form-select" required>
+              <option value="">-- Sélectionner --</option>
+              {% for id, nom in enfants.items() %}
+              <option value="{{ id }}">{{ nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label small text-muted fw-bold">STATUT</label>
+            <select name="statut" class="form-select">
+              <option value="present">Présent</option>
+              <option value="absent">Absent</option>
+              <option value="retard">En retard</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success mt-2">Valider</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Presence List -->
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Enfant</th>
+              <th>Date</th>
+              <th class="text-end pe-4">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in presences %}
+            <tr>
+              <td class="ps-4 fw-bold">
+                <div class="d-flex align-items-center">
+                  <div class="avatar-circle me-3">{{ p.nom_enfant[0]|upper }}</div>
+                  {{ p.nom_enfant }}
+                </div>
+              </td>
+              <td>{{ p.date }}</td>
+              <td class="text-end pe-4">
+                {% if p.statut == 'present' %}
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Présent</span>
+                {% elif p.statut == 'absent' %}
+                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Absent</span>
+                {% else %}
+                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ p.statut|capitalize
+                  }}</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center py-5 text-muted">Aucune présence enregistrée pour cette date.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
-<div class="list-group">
-  {% for p in presences %}
-    <div class="list-group-item d-flex justify-content-between">
-      <div>{{ p.nom_enfant }}</div>
-      <div><strong>{{ p.statut|upper }}</strong></div>
-    </div>
-  {% else %}
-    <p class="text-muted">Aucune présence pour cette date.</p>
-  {% endfor %}
-</div>
+
+<style>
+  .avatar-circle {
+    width: 40px;
+    height: 40px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+</style>
 {% endblock %}

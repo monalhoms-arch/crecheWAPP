@@ -7,6 +7,7 @@ class Paiement:
     montant: float
     date: datetime = datetime.now()
     mode: str = "espece"
+    statut: str = "paye" # paye, en_attente
 
     def to_dict(self):
         d = asdict(self)

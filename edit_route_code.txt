@@ -1,0 +1,49 @@
+@users_bp.route("/edit/<id>", methods=["POST"])
+@admin_required
+def edit_user(id):
+    try:
+        user_to_edit = db.users.find_one({"_id": ObjectId(id)})
+        if not user_to_edit:
+            flash("Utilisateur introuvable", "error")
+            return redirect(url_for("users_bp.list_users"))
+        
+        username = request.form.get("username")
+        password = request.form.get("password")
+        role = request.form.get("role")
+        related_id = request.form.get("related_id") or None
+        
+        # Prevent changing admin username
+        if user_to_edit['username'] == 'admin' and username != 'admin':
+            flash("Impossible de modifier le nom de l'administrateur principal", "error")
+            return redirect(url_for("users_bp.list_users"))
+        
+        # Check if new username already exists (if username changed)
+        if username != user_to_edit['username']:
+            if db.users.find_one({"username": username}):
+                flash("Ce nom d'utilisateur existe déjà", "error")
+                return redirect(url_for("users_bp.list_users"))
+        
+        # Prepare update data
+        update_data = {
+            "username": username,
+            "role": role,
+            "related_id": related_id
+        }
+        
+        # Only update password if provided
+        if password:
+            u = User(username=username, role=role)
+            u.set_password(password)
+            update_data["password_hash"] = u.password_hash
+        
+        db.users.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": update_data}
+        )
+        
+        flash(f"Utilisateur {username} modifié avec succès", "success")
+        
+    except Exception as e:
+        flash(f"Erreur lors de la modification: {str(e)}", "error")
+    
+    return redirect(url_for("users_bp.list_users"))

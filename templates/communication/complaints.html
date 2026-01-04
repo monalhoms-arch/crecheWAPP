@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Gestion des Plaintes</h2>
+
+{% if current_user.role == 'parent' %}
+<div class="card mb-4">
+    <div class="card-header">Nouvelle Plainte</div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-2"><input type="text" name="title" class="form-control" placeholder="Titre" required></div>
+            <div class="mb-2"><textarea name="description" class="form-control" placeholder="Description"
+                    required></textarea></div>
+            <button class="btn btn-danger">Soumettre</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="list-group">
+    {% for c in complaints %}
+    <div class="list-group-item">
+        <div class="d-flex w-100 justify-content-between">
+            <h5 class="mb-1">{{ c.title }} <span
+                    class="badge bg-{{ 'success' if c.status == 'RESOLVED' else 'warning' }}">{{ c.status }}</span></h5>
+            <small>{{ c.timestamp }}</small>
+        </div>
+        <p class="mb-1">{{ c.description }}</p>
+        <small class="text-muted">Par: {{ c.parent_id }}</small>
+
+        {% if c.response %}
+        <div class="alert alert-secondary mt-2">
+            <strong>Réponse:</strong> {{ c.response }}
+        </div>
+        {% endif %}
+
+        {% if current_user.role == 'admin' %}
+        <form action="{{ url_for('communication_bp.resolve_complaint', id=c._id) }}" method="POST"
+            class="mt-2 border-top pt-2">
+            <div class="input-group">
+                <input type="text" name="response" class="form-control" placeholder="Réponse..."
+                    value="{{ c.response }}">
+                <select name="status" class="form-select" style="max-width: 150px;">
+                    <option value="PENDING" {{ 'selected' if c.status=='PENDING' else '' }}>PENDING</option>
+                    <option value="RESOLVED" {{ 'selected' if c.status=='RESOLVED' else '' }}>RESOLVED</option>
+                </select>
+                <button class="btn btn-primary">Mettre à jour</button>
+            </div>
+        </form>
+        {% endif %}
+    </div>
+    {% else %}
+    <p>Aucune plainte.</p>
+    {% endfor %}
+</div>
+{% endblock %}

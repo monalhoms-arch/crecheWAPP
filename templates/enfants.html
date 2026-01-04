@@ -1,15 +1,157 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-3">Enfants</h2>
-<a href="/enfants/add" class="btn btn-primary mb-3">Ajouter un enfant</a>
-<div class="list-group">
-  {% for e in enfants %}
-    <div class="list-group-item d-flex justify-content-between align-items-center">
-      <div>{{ e.nom }} — {{ e.age }} ans
-        {% if parents[e.parent_id] %}<br><small>Parent: {{ parents[e.parent_id] }}</small>{% endif %}
-      </div>
-      <a href="/enfants/delete/{{ e._id }}" class="btn btn-danger btn-sm">Supprimer</a>
-    </div>
-  {% endfor %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h2>Gestion des Enfants</h2>
 </div>
-{% endblock %}
+
+{% if show_allergies_only %}
+<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <div>
+    <strong>Filtre actif:</strong> Affichage uniquement des enfants avec allergies
+    <a href="/enfants" class="ms-3 text-decoration-underline">Voir tous les enfants</a>
+  </div>
+</div>
+{% endif %}
+
+{% if current_user.role == 'admin' %}
+<div class="row">
+  <div class="col-md-4 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 text-primary fw-bold">
+          <i class="bi bi-person-plus-fill me-2"></i>Inscrire un enfant
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/enfants/add" class="d-grid gap-3">
+          <div>
+            <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
+            <input class="form-control" name="nom" placeholder="ex. Anis Ben..." required>
+          </div>
+          <div class="row">
+            <div class="col">
+              <label class="form-label small text-muted fw-bold">AGE</label>
+              <input type="number" name="age" class="form-control" placeholder="ans" required>
+            </div>
+            <div class="col">
+              <label class="form-label small text-muted fw-bold">GENRE</label>
+              <select name="gender" class="form-select">
+                <option value="G">Garçon</option>
+                <option value="F">Fille</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="form-label small text-muted fw-bold">PARENT</label>
+            <select name="parent_id" class="form-select">
+              <option value="">-- Sélectionner Parent --</option>
+              {% for p in all_parents %}
+              <option value="{{ p._id }}">{{ p.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label small text-muted fw-bold">GROUPE</label>
+            <select name="group_id" class="form-select">
+              <option value="">-- Sélectionner Groupe --</option>
+              {% for g in all_groups %}
+              <option value="{{ g._id }}">{{ g.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label small text-muted fw-bold">ALLERGIES</label>
+            <input class="form-control" name="allergies" placeholder="ex. Arachides, Lait (séparer par virgule)">
+          </div>
+          <button class="btn btn-primary mt-2">Inscrire</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    {% else %}
+    <div class="row">
+      <div class="col-12">
+        {% endif %}
+
+        <div class="card border-0 shadow-sm">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th class="ps-4">Enfant</th>
+                  <th>Info</th>
+                  <th>Parent</th>
+                  <th class="text-end pe-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in enfants %}
+                <tr>
+                  <td class="ps-4 fw-bold">
+                    <div class="d-flex align-items-center">
+                      <div class="avatar-circle me-3">{{ e.nom[0]|upper }}</div>
+                      <div>
+                        {{ e.nom }}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="badge bg-secondary bg-opacity-10 text-dark">{{ e.age }} ans</span>
+                    {% if e.gender == 'F' %}<i class="bi bi-gender-female text-danger small"></i>{% endif %}
+                    {% if e.gender == 'G' %}<i class="bi bi-gender-male text-primary small"></i>{% endif %}
+                    {% if e.allergies and e.allergies|length > 0 %}
+                    <div class="mt-1">
+                      {% for allergy in e.allergies %}
+                      <span class="badge bg-danger bg-opacity-10 text-danger me-1">
+                        <i class="bi bi-exclamation-circle-fill"></i> {{ allergy }}
+                      </span>
+                      {% endfor %}
+                    </div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if parents[e.parent_id] %}
+                    <span class="text-primary fw-medium">{{ parents[e.parent_id] }}</span>
+                    {% else %}
+                    <span class="text-muted small">Non assigné</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-4">
+                    {% if current_user.role == 'admin' %}
+                    <a href="/enfants/delete/{{ e._id }}" class="btn btn-outline-danger btn-sm"
+                      onclick="return confirm('Confirmer la suppression ?')">
+                      Supprimer
+                    </a>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="4" class="text-center py-5 text-muted">Aucun enfant inscrit</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--primary-color);
+      }
+    </style>
+    {% endblock %}

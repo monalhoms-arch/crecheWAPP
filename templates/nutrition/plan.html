@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Plan Nutritionnel : {{ child.nom }}</h2>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-header">Détails Enfant</div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item"><strong>Allergies:</strong> {{ child.allergies | join(', ') }}</li>
+                <li class="list-group-item"><strong>Âge:</strong> {{ child.age }}</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-header">Plan Actuel</div>
+            <div class="card-body">
+                {% if plan %}
+                <p><strong>Objectif:</strong> {{ plan.goal }}</p>
+                <p><strong>Restrictions:</strong> {{ plan.restrictions }}</p>
+                <p><strong>Notes:</strong> {{ plan.notes }}</p>
+                <small>Assigné par: {{ plan.assigned_by }}</small>
+                {% else %}
+                <p class="text-muted">Aucun plan défini pour le moment.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.role in ['admin', 'dietitian'] %}
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">Mettre à jour le plan</div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label>Objectif Nutritionnel</label>
+                        <input type="text" name="goal" class="form-control" value="{{ plan.goal if plan else '' }}"
+                            required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Restrictions (ex: Sans sel)</label>
+                        <input type="text" name="restrictions" class="form-control"
+                            value="{{ plan.restrictions if plan else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label>Notes / Observations</label>
+                        <textarea name="notes" class="form-control">{{ plan.notes if plan else '' }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success">Enregistrer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">Suivi Quotidien (Journal des Repas)</div>
+    <div class="card-body">
+        {% if current_user.role in ['dietitian', 'educateur'] %}
+        <form action="{{ url_for('nutrition_bp.log_meal', child_id=child._id) }}" method="POST"
+            class="mb-4 border-bottom pb-3">
+            <div class="row">
+                <div class="col"><input type="date" name="date" class="form-control" require></div>
+                <div class="col">
+                    <select name="meal_type" class="form-control">
+                        <option value="Petit-déjeuner">Petit-déjeuner</option>
+                        <option value="Déjeuner">Déjeuner</option>
+                        <option value="Goûter">Goûter</option>
+                    </select>
+                </div>
+                <div class="col">
+                    <div class="form-check pt-2">
+                        <input class="form-check-input" type="checkbox" name="eaten" id="eatenCheck">
+                        <label class="form-check-label" for="eatenCheck">A mangé ?</label>
+                    </div>
+                </div>
+                <div class="col"><input type="text" name="comment" class="form-control" placeholder="Commentaire"></div>
+                <div class="col"><button class="btn btn-primary">Ajouter</button></div>
+            </div>
+        </form>
+        {% endif %}
+
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Repas</th>
+                    <th>Statut</th>
+                    <th>Commentaire</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>{{ r.date }}</td>
+                    <td>{{ r.meal_type }}</td>
+                    <td>
+                        {% if r.eaten %}
+                        <span class="badge bg-success">Mangé</span>
+                        {% else %}
+                        <span class="badge bg-danger">Non mangé</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ r.comment }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

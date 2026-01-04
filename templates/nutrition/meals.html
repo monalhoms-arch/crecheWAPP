@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestion des Repas</h2>
+</div>
+
+<div class="row">
+    <!-- Add/Edit Meal Form -->
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0 text-success fw-bold" id="formTitle">
+                    <i class="bi bi-plus-circle me-2" id="formIcon"></i><span id="formTitleText">Ajouter un repas</span>
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
+                    onclick="resetForm()">Annuler</button>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('nutrition_bp.manage_meals') }}" class="d-grid gap-3"
+                    id="mealForm">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">NOM</label>
+                        <input type="text" name="name" id="mealName" class="form-control" placeholder="Nom du repas"
+                            required>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">TYPE</label>
+                        <select name="type" id="mealType" class="form-select">
+                            <option value="Petit-déjeuner">Petit-déjeuner</option>
+                            <option value="Déjeuner">Déjeuner</option>
+                            <option value="Goûter">Goûter</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">CALORIES</label>
+                        <input type="number" name="calories" id="mealCalories" class="form-control"
+                            placeholder="ex: 300">
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">INGRÉDIENTS</label>
+                        <textarea name="ingredients" id="mealIngredients" class="form-control" rows="3"
+                            placeholder="Ingrédients..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success mt-2" id="submitBtn">Ajouter</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meals List -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="mb-0 fw-bold">Liste des Repas</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Repas</th>
+                                <th>Type</th>
+                                <th>Calories</th>
+                                <th class="text-end pe-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for m in meals %}
+                            <tr onclick='loadMealForEdit({{ m|tojson|safe }})' style="cursor: pointer;"
+                                class="meal-row">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ m.name }}</div>
+                                    <small class="text-muted">{{ m.ingredients }}</small>
+                                </td>
+                                <td><span class="badge bg-info bg-opacity-10 text-info">{{ m.type }}</span></td>
+                                <td><span class="text-muted">{{ m.calories }} kcal</span></td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-outline-danger btn-sm"
+                                        onclick="deleteMeal('{{ m._id }}', '{{ m.name }}', event)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">Aucun repas répertorié</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le repas <strong id="deleteMealName"></strong> ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let mealIdToDelete = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    function deleteMeal(mealId, mealName, event) {
+        if (event) {
+            event.stopPropagation();
+        }
+        mealIdToDelete = mealId;
+        document.getElementById('deleteMealName').textContent = mealName;
+        deleteModal.show();
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (mealIdToDelete) {
+            window.location.href = '/nutrition/meals/delete/' + mealIdToDelete;
+        }
+    });
+
+    function loadMealForEdit(meal) {
+        if (event && event.target.closest('button')) {
+            event.stopPropagation();
+            return;
+        }
+
+        document.getElementById('mealName').value = meal.name;
+        document.getElementById('mealType').value = meal.type;
+        document.getElementById('mealCalories').value = meal.calories || '';
+        document.getElementById('mealIngredients').value = meal.ingredients || '';
+
+        document.getElementById('mealForm').action = '/nutrition/meals/edit/' + meal._id;
+        document.getElementById('formTitleText').textContent = 'Modifier le repas';
+        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
+        document.getElementById('submitBtn').textContent = 'Mettre à jour';
+        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+        document.querySelector('.card-header').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('mealForm').reset();
+        document.getElementById('mealForm').action = "{{ url_for('nutrition_bp.manage_meals') }}";
+        document.getElementById('formTitleText').textContent = 'Ajouter un repas';
+        document.getElementById('formIcon').className = 'bi bi-plus-circle me-2';
+        document.getElementById('submitBtn').textContent = 'Ajouter';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+</script>
+{% endblock %}

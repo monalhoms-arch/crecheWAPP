@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Nouveau Message</h2>
+
+<form method="POST">
+    <div class="mb-3">
+        <label>Destinataire</label>
+        <select name="recipient" class="form-control" required>
+            <option value="">-- Choisir --</option>
+            {% for u in users %}
+            {% if u.username != current_user.username %}
+            <option value="{{ u.username }}">{{ u.username }} ({{ u.role }})</option>
+            {% endif %}
+            {% endfor %}
+        </select>
+    </div>
+    <div class="mb-3">
+        <label>Sujet</label>
+        <input type="text" name="subject" class="form-control" required>
+    </div>
+    <div class="mb-3">
+        <label>Message</label>
+        <textarea name="body" class="form-control" rows="5" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Envoyer</button>
+</form>
+{% endblock %}

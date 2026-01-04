@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h4 class="card-title mb-0 text-primary fw-bold">Ajouter un Nutritionniste</h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Nom complet</label>
+                        <input type="text" name="nom" class="form-control form-control-lg"
+                            placeholder="ex. Dr. Sarah Benz" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Téléphone</label>
+                            <input type="tel" name="telephone" class="form-control" placeholder="+213...">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="email@exemple.com">
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Spécialité</label>
+                        <input type="text" name="specialite" class="form-control"
+                            placeholder="ex: Nutrition infantile, Allergies...">
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('dietitians_bp.list_dietitians') }}" class="btn btn-light px-4">Annuler</a>
+                        <button type="submit" class="btn btn-primary px-5">Enregistrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

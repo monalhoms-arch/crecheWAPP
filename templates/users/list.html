@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestion des Utilisateurs</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom-0 py-3" id="formCardHeader">
+                <h5 class="card-title mb-0 text-primary fw-bold" id="formTitle">
+                    <i class="bi bi-person-plus-fill me-2" id="formIcon"></i><span id="formTitleText">Nouveau
+                        compte</span>
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
+                    onclick="resetForm()">Annuler</button>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('users_bp.add_user') }}" class="d-grid gap-3" id="userForm">
+                    <input type="hidden" name="user_id" id="userId" value="">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">NOM D'UTILISATEUR</label>
+                        <input type="text" name="username" id="usernameInput" class="form-control" autocomplete="off"
+                            required>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">MOT DE PASSE</label>
+                        <input type="password" name="password" id="passwordInput" class="form-control"
+                            autocomplete="new-password" required id="passwordField">
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">RÔLE</label>
+                        <select name="role" class="form-select" id="roleSelect" onchange="toggleRelated()" required>
+                            <option value="admin">Admin</option>
+                            <option value="parent">Parent</option>
+                            <option value="educateur">Éducateur</option>
+                            <option value="dietitian">Diététicien</option>
+                        </select>
+                    </div>
+
+                    <!-- Dynamic Sections -->
+                    <div id="parentSelect" style="display:none;">
+                        <label class="form-label small text-muted fw-bold text-success">Lier au profil Parent</label>
+                        <select name="related_id_parent" class="form-select" onchange="setRelated(this.value)">
+                            <option value="">-- Sélectionner --</option>
+                            {% for p in parents %}
+                            <option value="{{ p._id }}">{{ p.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="educateurSelect" style="display:none;">
+                        <label class="form-label small text-muted fw-bold text-primary">Lier au profil Éducateur</label>
+                        <select name="related_id_ed" class="form-select" onchange="setRelated(this.value)">
+                            <option value="">-- Sélectionner --</option>
+                            {% for e in educateurs %}
+                            <option value="{{ e._id }}">{{ e.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div id="dietitianSelect" style="display:none;">
+                        <label class="form-label small text-muted fw-bold text-info">Lier au profil
+                            Nutritionniste</label>
+                        <select name="related_id_diet" class="form-select" onchange="setRelated(this.value)">
+                            <option value="">-- Sélectionner --</option>
+                            {% for d in dietitians %}
+                            <option value="{{ d._id }}">{{ d.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Hidden Input for actual related_id submission -->
+                    <input type="hidden" name="related_id" id="related_id_final">
+
+                    <button type="submit" class="btn btn-primary mt-2" id="submitBtn">Créer le compte</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Utilisateur</th>
+                            <th>Rôle</th>
+                            <th>Profil Lié</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr {% if u.username !='admin' and u.username !=current_user.username
+                            %}onclick='loadUserForEdit({{ u|tojson|safe }})' style="cursor: pointer;" {% endif %}
+                            class="user-row">
+                            <td class="ps-4">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3">{{ u.username[0]|upper }}</div>
+                                    <span class="fw-bold text-dark">{{ u.username }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                {% if u.role == 'admin' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Admin</span>
+                                {% elif u.role == 'educateur' %}
+                                <span
+                                    class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3">Éducateur</span>
+                                {% elif u.role == 'parent' %}
+                                <span
+                                    class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Parent</span>
+                                {% elif u.role == 'dietitian' %}
+                                <span
+                                    class="badge bg-info bg-opacity-10 text-info rounded-pill px-3">Nutritionniste</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill px-3">{{ u.role }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if u.related_id %}
+                                <span class="text-dark fw-medium">{{ related_map.get(u.related_id, 'Inconnu') }}</span>
+                                {% else %}
+                                <span class="text-muted small fst-italic">Non lié</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                {% if u.username != 'admin' and u.username != current_user.username %}
+                                <button class="btn btn-outline-danger btn-sm"
+                                    onclick="deleteUser('{{ u._id|string }}', '{{ u.username }}')">
+                                    Supprimer
+                                </button>
+                                {% else %}
+                                <span class="text-muted small"><i class="bi bi-lock-fill"></i> Protégé</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer l'utilisateur <strong id="deleteUsername"></strong> ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let userIdToDelete = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+
+    function deleteUser(userId, username) {
+        userIdToDelete = userId;
+        document.getElementById('deleteUsername').textContent = username;
+        deleteModal.show();
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (userIdToDelete) {
+            window.location.href = '/users/delete/' + userIdToDelete;
+        }
+    });
+
+    function loadUserForEdit(user) {
+        // Prevent row click when clicking delete button
+        if (event && event.target.closest('button')) {
+            event.stopPropagation();
+            return;
+        }
+
+        // Populate form fields
+        document.getElementById('usernameInput').value = user.username;
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').removeAttribute('required');
+        document.getElementById('roleSelect').value = user.role;
+        document.getElementById('related_id_final').value = user.related_id || '';
+
+        // Update form action and title
+        document.getElementById('userForm').action = '/users/edit/' + user._id;
+        document.getElementById('formTitleText').textContent = 'Modifier le compte';
+        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
+        document.getElementById('submitBtn').textContent = 'Mettre à jour';
+        document.getElementById('submitBtn').className = 'btn btn-success mt-2';
+        document.getElementById('cancelEditBtn').style.display = 'inline-block';
+
+        // Trigger related field visibility
+        toggleRelated();
+
+        // Set related_id in appropriate dropdown
+        if (user.role === 'parent') {
+            document.getElementsByName('related_id_parent')[0].value = user.related_id || '';
+        } else if (user.role === 'educateur') {
+            document.getElementsByName('related_id_ed')[0].value = user.related_id || '';
+        } else if (user.role === 'dietitian') {
+            document.getElementsByName('related_id_diet')[0].value = user.related_id || '';
+        }
+
+        // Scroll to form
+        document.getElementById('formCardHeader').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        // Reset form
+        document.getElementById('userForm').reset();
+        document.getElementById('userForm').action = '{{ url_for("users_bp.add_user") }}';
+        document.getElementById('formTitleText').textContent = 'Nouveau compte';
+        document.getElementById('formIcon').className = 'bi bi-person-plus-fill me-2';
+        document.getElementById('submitBtn').textContent = 'Créer le compte';
+        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
+        document.getElementById('cancelEditBtn').style.display = 'none';
+        document.getElementById('passwordInput').setAttribute('required', 'required');
+        document.getElementById('related_id_final').value = '';
+
+        // Hide all related selects
+        document.getElementById('parentSelect').style.display = 'none';
+        document.getElementById('educateurSelect').style.display = 'none';
+        document.getElementById('dietitianSelect').style.display = 'none';
+    }
+
+
+    function toggleRelated() {
+        var role = document.getElementById("roleSelect").value;
+        document.getElementById("parentSelect").style.display = (role === 'parent') ? 'block' : 'none';
+        document.getElementById("educateurSelect").style.display = (role === 'educateur') ? 'block' : 'none';
+        document.getElementById("dietitianSelect").style.display = (role === 'dietitian') ? 'block' : 'none';
+
+        // Clear related ID when switching roles to avoid mismatch
+        document.getElementById("related_id_final").value = "";
+
+        // Reset selects
+        document.getElementsByName("related_id_parent")[0].value = "";
+        document.getElementsByName("related_id_ed")[0].value = "";
+        document.getElementsByName("related_id_diet")[0].value = "";
+    }
+
+    function setRelated(val) {
+        document.getElementById("related_id_final").value = val;
+    }
+</script>
+
+<style>
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+    }
+</style>
+{% endblock %}

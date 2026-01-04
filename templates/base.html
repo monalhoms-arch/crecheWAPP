@@ -1,26 +1,143 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <meta charset="utf-8">
-    <title>Gestion Crèche</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestion Crèche</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 </head>
+
 <body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
-  <div class="container">
-    <a class="navbar-brand" href="/">Crèche</a>
-    <div>
-      <a class="btn btn-light btn-sm me-2" href="/parents">Parents</a>
-      <a class="btn btn-light btn-sm me-2" href="/enfants">Enfants</a>
-      <a class="btn btn-light btn-sm me-2" href="/educateurs">Éducateurs</a>
-      <a class="btn btn-light btn-sm me-2" href="/activites">Activités</a>
-      <a class="btn btn-light btn-sm me-2" href="/presences">Présences</a>
-      <a class="btn btn-light btn-sm" href="/paiements">Paiements</a>
+  <nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="/">Crèche</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto">
+          {% if current_user.is_authenticated %}
+          <!-- Admin Links: Management Only -->
+          {% if current_user.role == 'admin' %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownProfils" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-people"></i> Profils
+            </a>
+            <ul class="dropdown-menu border-0 shadow" aria-labelledby="navbarDropdownProfils">
+              <li><a class="dropdown-item" href="/parents">Parents</a></li>
+              <li><a class="dropdown-item" href="/enfants">Enfants</a></li>
+              <li>
+                <hr class="dropdown-divider">
+              </li>
+              <li><a class="dropdown-item" href="/educateurs">Éducateurs</a></li>
+              <li><a class="dropdown-item" href="/dietitians">Nutritionnistes</a></li>
+              <li><a class="dropdown-item" href="/users">Utilisateurs System</a></li>
+            </ul>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownGestion" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-grid"></i> Gestion
+            </a>
+            <ul class="dropdown-menu border-0 shadow" aria-labelledby="navbarDropdownGestion">
+              <li><a class="dropdown-item" href="/groups">Groupes</a></li>
+              <li><a class="dropdown-item" href="/presences">Présences</a></li>
+              <li><a class="dropdown-item" href="/activites">Activités</a></li>
+            </ul>
+          </li>
+
+          <li class="nav-item"><a class="nav-link" href="/paiements"><i class="bi bi-wallet2"></i> Paiements</a></li>
+          <li class="nav-item"><a class="nav-link" href="/communication/complaints"><i
+                class="bi bi-exclamation-circle"></i> Plaintes</a></li>
+          {% endif %}
+
+          <!-- Dietitian Links -->
+          {% if current_user.role == 'dietitian' %}
+          <li class="nav-item"><a class="nav-link" href="/enfants"><i class="bi bi-people-fill"></i> Enfants</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownDiet" role="button" data-bs-toggle="dropdown"
+              aria-expanded="false">
+              Nutrition
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownDiet">
+              <li><a class="dropdown-item" href="/nutrition/meals">Repas</a></li>
+              <li><a class="dropdown-item" href="/nutrition/menus">Menus</a></li>
+            </ul>
+          </li>
+          <li class="nav-item"><a class="nav-link" href="/communication/inbox">Messages</a></li>
+          {% endif %}
+
+          <!-- Educateur Links -->
+          {% if current_user.role == 'educateur' %}
+          <li class="nav-item"><a class="nav-link" href="/groups">Groupes</a></li>
+          <li class="nav-item"><a class="nav-link" href="/activites">Activités</a></li>
+          <li class="nav-item"><a class="nav-link" href="/presences">Présences</a></li>
+          <li class="nav-item"><a class="nav-link" href="/communication/inbox">Messages</a></li>
+          {% endif %}
+
+          <!-- Parent Links -->
+          {% if current_user.role == 'parent' %}
+          <li class="nav-item"><a class="nav-link" href="/enfants">Mes Enfants</a></li>
+          <li class="nav-item"><a class="nav-link" href="/nutrition/menus">Menus</a></li>
+          <li class="nav-item"><a class="nav-link" href="/paiements">Mes Paiements</a></li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownParent" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              Communication
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="navbarDropdownParent">
+              <li><a class="dropdown-item" href="/communication/inbox">Messages</a></li>
+              <li><a class="dropdown-item" href="/communication/complaints">Plaintes</a></li>
+            </ul>
+          </li>
+          {% endif %}
+          {% endif %}
+        </ul>
+        <ul class="navbar-nav">
+          {% if current_user.is_authenticated %}
+          <!-- Shared Inbox Link for everyone except maybe admin if they use a global view -->
+          {% if current_user.role != 'parent' and current_user.role != 'dietitian' and current_user.role != 'educateur'
+          %}
+          <!-- Admin already has complaints link, maybe add inbox? -->
+          <li class="nav-item"><a class="nav-link" href="/communication/inbox">Messages</a></li>
+          {% endif %}
+
+          <li class="nav-item"><span class="navbar-text me-3">Bonjour, {{ current_user.username }} ({{ current_user.role
+              }})</span></li>
+          <li class="nav-item"><a class="btn btn-light btn-sm" href="{{ url_for('auth.logout') }}">Déconnexion</a></li>
+          {% else %}
+          <li class="nav-item"><a class="btn btn-light btn-sm" href="{{ url_for('auth.login') }}">Connexion</a></li>
+          {% endif %}
+        </ul>
+
+        <!-- Script for Bootstrap JS (needed for Dropdowns) -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+      </div>
     </div>
-  </div>
-</nav>
-<div class="container">
+  </nav>
+  <div class="container mt-5 pt-4">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    <div
+      class="alert alert-{{ 'danger' if category == 'error' else 'success' if category == 'success' else 'info' }} alert-dismissible fade show"
+      role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+
     {% block content %}{% endblock %}
-</div>
+  </div>
 </body>
+
 </html>

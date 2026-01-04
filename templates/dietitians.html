@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestion des Nutritionnistes</h2>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom-0 py-3">
+                <h5 class="card-title mb-0 text-primary fw-bold">
+                    <i class="bi bi-person-plus-fill me-2"></i>Ajouter un nutritionniste
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('dietitians_bp.add_dietitian') }}" class="d-grid gap-3">
+                    <div>
+                        <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
+                        <input class="form-control" name="nom" placeholder="ex. Dr. Sarah" required>
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">SPÉCIALITÉ</label>
+                        <input class="form-control" name="specialite" placeholder="ex. Pédiatrique">
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">EMAIL</label>
+                        <input type="email" name="email" class="form-control" placeholder="email@exemple.com">
+                    </div>
+                    <div>
+                        <label class="form-label small text-muted fw-bold">TÉLÉPHONE</label>
+                        <input type="tel" name="telephone" class="form-control" placeholder="05 55 ...">
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2">Enregistrer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nutritionniste</th>
+                            <th>Info Contact</th>
+                            <th>Spécialité</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for d in dietitians %}
+                        <tr>
+                            <td class="ps-4 fw-bold">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-3">{{ d.nom[0]|upper }}</div>
+                                    {{ d.nom }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small">{{ d.email }}</div>
+                                <div class="small text-muted">{{ d.telephone }}</div>
+                            </td>
+                            <td><span class="badge bg-info bg-opacity-10 text-info">{{ d.specialite }}</span></td>
+                            <td class="text-end pe-4">
+                                <a href="{{ url_for('dietitians_bp.delete_dietitian', id=d._id) }}"
+                                    class="btn btn-outline-danger btn-sm"
+                                    onclick="return confirm('Confirmer suppression ?')">
+                                    Supprimer
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted">Aucun nutritionniste trouvé</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+</style>
+{% endblock %}

@@ -1,12 +1,328 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="mb-4">Accueil — Gestion de Crèche</h2>
-<div class="list-group">
-  <a href="/parents" class="list-group-item list-group-item-action">👪 Parents</a>
-  <a href="/enfants" class="list-group-item list-group-item-action">🧒 Enfants</a>
-  <a href="/educateurs" class="list-group-item list-group-item-action">👩‍🏫 Éducateurs</a>
-  <a href="/activites" class="list-group-item list-group-item-action">🎨 Activités</a>
-  <a href="/presences" class="list-group-item list-group-item-action">📋 Présences</a>
-  <a href="/paiements" class="list-group-item list-group-item-action">💵 Paiements</a>
+
+<!-- WELCOME BANNER -->
+<div class="row mb-4">
+  <div class="col-12">
+    <div class="card border-0 bg-primary text-white shadow-sm overflow-hidden" style="border-radius: 15px;">
+      <div class="card-body p-4 d-flex justify-content-between align-items-center relative">
+        <div>
+          <h2 class="fw-bold mb-1">Bonjour, {{ current_user.username }} !</h2>
+          <p class="mb-0 opacity-75">
+            {% if current_user.role == 'admin' %}Administrateur Système
+            {% elif current_user.role == 'educateur' %}Éducateur
+            {% elif current_user.role == 'parent' %}Espace Parents
+            {% elif current_user.role == 'dietitian' %}Nutritionniste
+            {% endif %} | {{ stats.today_date }}
+          </p>
+        </div>
+        <div class="d-none d-md-block ms-4">
+          <i class="bi bi-speedometer2" style="font-size: 3rem; opacity: 0.3;"></i>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- DASHBOARD CONTENT BASED ON ROLE -->
+
+<!-- ================= ADMIN DASHBOARD ================= -->
+{% if current_user.role == 'admin' %}
+<!-- Quick Stats Cards -->
+<!-- 1. Enfant (Core) -->
+<div class="col-md">
+  <div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+      <div class="icon-circle bg-success bg-opacity-10 text-success mb-3 mx-auto">
+        <i class="bi bi-emoji-smile-fill"></i>
+      </div>
+      <h3 class="fw-bold mb-0">{{ stats.enfants_count }}</h3>
+      <span class="text-muted small">Enfants</span>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Parents (Core) -->
+<div class="col-md">
+  <div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+      <div class="icon-circle bg-primary bg-opacity-10 text-primary mb-3 mx-auto">
+        <i class="bi bi-people-fill"></i>
+      </div>
+      <h3 class="fw-bold mb-0">{{ stats.parents_count }}</h3>
+      <span class="text-muted small">Parents</span>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Educateurs (Staff) -->
+<div class="col-md">
+  <div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+      <div class="icon-circle bg-info bg-opacity-10 text-info mb-3 mx-auto">
+        <i class="bi bi-person-badge-fill"></i>
+      </div>
+      <h3 class="fw-bold mb-0">{{ stats.educateurs_count }}</h3>
+      <span class="text-muted small">Éducateurs</span>
+    </div>
+  </div>
+</div>
+
+<!-- 4. Nutritionnistes (Staff) -->
+<div class="col-md">
+  <div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+      <div class="icon-circle bg-danger bg-opacity-10 text-danger mb-3 mx-auto">
+        <i class="bi bi-heart-pulse-fill"></i>
+      </div>
+      <h3 class="fw-bold mb-0">{{ stats.dietitians_count }}</h3>
+      <span class="text-muted small">Nutritionnistes</span>
+    </div>
+  </div>
+</div>
+
+<!-- 5. System (Admin) -->
+<div class="col-md">
+  <div class="card border-0 shadow-sm h-100">
+    <div class="card-body text-center">
+      <div class="icon-circle bg-warning bg-opacity-10 text-warning mb-3 mx-auto">
+        <i class="bi bi-shield-lock-fill"></i>
+      </div>
+      <h3 class="fw-bold mb-0">{{ stats.users_count }}</h3>
+      <span class="text-muted small">Comptes Système</span>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between">
+        <h5 class="card-title mb-0 fw-bold">Paiements Récents</h5>
+        <a href="/paiements" class="btn btn-sm btn-outline-primary">Voir tout</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Date</th>
+              <th>Montant</th>
+              <th>Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in stats.recent_payments %}
+            <tr>
+              <td class="ps-4">{{ p.date.strftime('%d/%m/%Y') }}</td>
+              <td class="fw-bold text-dark">{{ p.montant }} €</td>
+              <td>
+                {% if p.statut == 'en_attente' %}
+                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill">En attente</span>
+                {% else %}
+                <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Payé</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="3" class="text-center text-muted py-3">Aucun paiement récent</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold">Actions Rapides</h5>
+      </div>
+      <div class="list-group list-group-flush">
+        <a href="/users" class="list-group-item list-group-item-action d-flex align-items-center py-3">
+          <i class="bi bi-person-plus me-3 text-primary"></i> Ajouter un utilisateur
+        </a>
+        <a href="{{ url_for('paiements_bp.list_paiements') }}"
+          class="list-group-item list-group-item-action d-flex align-items-center py-3">
+          <i class="bi bi-file-earmark-pdf me-3 text-danger"></i> Générer Factures
+        </a>
+        <a href="/communication/complaints"
+          class="list-group-item list-group-item-action d-flex align-items-center py-3">
+          <i class="bi bi-exclamation-circle me-3 text-warning"></i> Voir Plaintes
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PARENT DASHBOARD ================= -->
+{% elif current_user.role == 'parent' %}
+<div class="row g-4">
+  <!-- My Children Quick View -->
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold">Mes Enfants</h5>
+      </div>
+      <div class="card-body">
+        {% if stats.my_children %}
+        <div class="d-flex gap-3 flex-wrap">
+          {% for c in stats.my_children %}
+          <div class="text-center p-3 border rounded mw-100" style="min-width: 120px;">
+            <div class="avatar-circle mx-auto mb-2 bg-primary text-white"
+              style="width: 50px; height: 50px; font-size: 1.5rem;">
+              {{ c.nom[0]|upper }}
+            </div>
+            <h6 class="mb-0 fw-bold">{{ c.nom }}</h6>
+            <small class="text-muted">{{ c.age }} ans</small>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="mt-4">
+          <a href="/enfants" class="btn btn-outline-primary w-100">Voir détails complets</a>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-4">Aucun enfant lié à ce compte.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Outstanding Payments Alert -->
+  <div class="col-md-6 mb-4">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold">État de Compte</h5>
+      </div>
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        {% if stats.pending_payments > 0 %}
+        <div class="mb-3">
+          <i class="bi bi-exclamation-circle-fill text-warning display-4"></i>
+        </div>
+        <h3>{{ stats.pending_payments }} Facture(s) en attente</h3>
+        <p class="text-muted">Vous avez des paiements non réglés.</p>
+        <a href="/paiements" class="btn btn-warning text-white rounded-pill px-4 mt-auto">Régler maintenant</a>
+        {% else %}
+        <div class="mb-3">
+          <i class="bi bi-check-circle-fill text-success display-4"></i>
+        </div>
+        <h3>Tout est à jour !</h3>
+        <p class="text-muted">Aucun paiement en attente. Merci !</p>
+        <a href="/paiements" class="btn btn-outline-secondary rounded-pill px-4 mt-auto">Voir historique</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body d-flex justify-content-between align-items-center p-4">
+        <div>
+          <h5 class="fw-bold mb-1">Menu de la cantine</h5>
+          <p class="text-muted mb-0">Découvrez ce que vos enfants mangent cette semaine.</p>
+        </div>
+        <a href="/nutrition/menus" class="btn btn-primary rounded-pill px-4">Voir le Menu</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= EDUCATEUR DASHBOARD ================= -->
+{% elif current_user.role == 'educateur' %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold">Mes Groupes</h5>
+      </div>
+      <div class="card-body">
+        {% if stats.my_groups %}
+        <ul class="list-group list-group-flush">
+          {% for g in stats.my_groups %}
+          <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+            <div>
+              <h6 class="mb-0 fw-bold">{{ g.nom }}</h6>
+              <small class="text-muted">{{ g.age_range }} ans</small>
+            </div>
+            <span class="badge bg-primary rounded-pill">{{ g.capacity }} places</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted text-center py-4">Aucun groupe assigné.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100 bg-primary text-white">
+      <div class="card-body text-center d-flex flex-column justify-content-center">
+        <i class="bi bi-calendar-check mb-3" style="font-size: 3rem;"></i>
+        <h3 class="fw-bold">Présences</h3>
+        <p class="opacity-75">Gérez les présences de vos groupes pour aujourd'hui.</p>
+        <a href="/presences" class="btn btn-light text-primary fw-bold rounded-pill mt-3">Faire l'appel</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DIETITIAN DASHBOARD ================= -->
+{% elif current_user.role == 'dietitian' %}
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold text-danger">Alerte Allergies</h5>
+      </div>
+      <div class="card-body text-center">
+        <h1 class="display-1 fw-bold text-danger">{{ stats.allergy_kids_count }}</h1>
+        <p class="text-muted">Enfants avec des restrictions alimentaires enregistrées.</p>
+        <a href="/enfants?allergies=true" class="btn btn-outline-danger mt-3">Voir la liste</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom-0 py-3">
+        <h5 class="card-title mb-0 fw-bold">Gestion des Menus</h5>
+      </div>
+      <div class="list-group list-group-flush">
+        <a href="/nutrition/menus" class="list-group-item list-group-item-action py-3">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1 fw-bold">Planifier la semaine</h6>
+            <small class="text-primary">Accéder</small>
+          </div>
+          <small class="text-muted">Créer et modifier les menus hebdomadaires.</small>
+        </a>
+        <a href="/nutrition/meals" class="list-group-item list-group-item-action py-3">
+          <div class="d-flex w-100 justify-content-between">
+            <h6 class="mb-1 fw-bold">Gérer les Repas</h6>
+            <small class="text-primary">Accéder</small>
+          </div>
+          <small class="text-muted">Ajouter de nouvelles recettes ou plats.</small>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+<style>
+  .icon-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+</style>
+
 {% endblock %}
