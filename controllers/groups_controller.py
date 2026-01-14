@@ -31,6 +31,32 @@ def add_group():
         db.groups.insert_one(g.to_dict())
     return redirect(url_for("groups_bp.list_groups"))
 
+@groups_bp.route("/edit/<id>", methods=["GET","POST"])
+@admin_required
+def edit_group(id):
+    group = db.groups.find_one({"_id": ObjectId(id)})
+    if not group:
+         return redirect(url_for("groups_bp.list_groups"))
+
+    if request.method == "POST":
+        db.groups.update_one({"_id": ObjectId(id)}, {"$set": {
+            "nom": request.form.get("nom"),
+            "capacity": int(request.form.get("capacity", 0)),
+            "age_range": request.form.get("age_range"),
+            "educateur_id": request.form.get("educateur_id") or None
+        }})
+        return redirect(url_for("groups_bp.list_groups"))
+
+    groups = list(db.groups.find().sort("_id", -1))
+    educateurs_map = {str(e['_id']): e['nom'] for e in db.educateurs.find()}
+    educateurs_list = list(db.educateurs.find())
+    
+    return render_template("groups.html", 
+                         groups=groups, 
+                         educateurs=educateurs_map, 
+                         educateurs_list=educateurs_list,
+                         group_to_edit=group)
+
 @groups_bp.route("/delete/<id>")
 @admin_required
 def delete_group(id):

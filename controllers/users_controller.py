@@ -92,15 +92,15 @@ def delete_user(id):
     response.headers['Expires'] = '0'
     return response
 
-@users_bp.route("/edit/<id>", methods=["POST"])
+@users_bp.route("/edit/<id>", methods=["GET", "POST"])
 @admin_required
 def edit_user(id):
-    try:
-        user_to_edit = db.users.find_one({"_id": ObjectId(id)})
-        if not user_to_edit:
-            flash("Utilisateur introuvable", "error")
-            return redirect(url_for("users_bp.list_users"))
-        
+    user_to_edit = db.users.find_one({"_id": ObjectId(id)})
+    if not user_to_edit:
+        flash("Utilisateur introuvable", "error")
+        return redirect(url_for("users_bp.list_users"))
+    
+    if request.method == "POST":
         username = request.form.get("username")
         password = request.form.get("password")
         role = request.form.get("role")
@@ -117,28 +117,52 @@ def edit_user(id):
                 flash("Ce nom d'utilisateur existe déjà", "error")
                 return redirect(url_for("users_bp.list_users"))
         
-        # Prepare update data
-        update_data = {
-            "username": username,
-            "role": role,
-            "related_id": related_id
-        }
+        try:
+            # Prepare update data
+            update_data = {
+                "username": username,
+                "role": role,
+                "related_id": related_id
+            }
+            
+            # Only update password if provided
+            if password:
+                u = User(username=username, role=role)
+                u.set_password(password)
+                update_data["password_hash"] = u.password_hash
+            
+            db.users.update_one(
+                {"_id": ObjectId(id)},
+                {"$set": update_data}
+            )
+            flash(f"Utilisateur {username} modifié avec succès", "success")
+        except Exception as e:
+            flash(f"Erreur lors de la modification: {str(e)}", "error")
         
-        # Only update password if provided
-        if password:
-            u = User(username=username, role=role)
-            u.set_password(password)
-            update_data["password_hash"] = u.password_hash
+        return redirect(url_for("users_bp.list_users"))
+
+    # GET: Render list with edit context
+    users = list(db.users.find().sort("username", 1))
+    for user in users:
+        user['_id'] = str(user['_id'])
         
-        db.users.update_one(
-            {"_id": ObjectId(id)},
-            {"$set": update_data}
-        )
+    related_map = {}
+    all_parents = list(db.parents.find({}, {"_id": 1, "nom": 1}))
+    all_educateurs = list(db.educateurs.find({}, {"_id": 1, "nom": 1}))
+    all_dietitians = list(db.dietitians.find({}, {"_id": 1, "nom": 1}))
+
+    for p in all_parents:
+        related_map[str(p["_id"])] = p["nom"]
+    for e in all_educateurs:
+        related_map[str(e["_id"])] = e["nom"]
+    for d in all_dietitians:
+        related_map[str(d["_id"])] = d["nom"]
         
-        flash(f"Utilisateur {username} modifié avec succès", "success")
-        
-    except Exception as e:
-        flash(f"Erreur lors de la modification: {str(e)}", "error")
-    
-    return redirect(url_for("users_bp.list_users"))
+    return render_template("users/list.html", 
+                         users=users, 
+                         related_map=related_map, 
+                         parents=all_parents, 
+                         educateurs=all_educateurs, 
+                         dietitians=all_dietitians,
+                         user_to_edit=user_to_edit)
 

@@ -20,25 +20,35 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white border-bottom-0 py-3">
         <h5 class="card-title mb-0 text-primary fw-bold">
+          {% if enfant_to_edit %}
+          <i class="bi bi-pencil-square me-2"></i>Modifier enfant
+          {% else %}
           <i class="bi bi-person-plus-fill me-2"></i>Inscrire un enfant
+          {% endif %}
         </h5>
       </div>
       <div class="card-body">
-        <form method="POST" action="/enfants/add" class="d-grid gap-3">
+        <form method="POST"
+          action="{{ url_for('enfants_bp.edit_enfant', id=enfant_to_edit._id) if enfant_to_edit else url_for('enfants_bp.add_enfant') }}"
+          class="d-grid gap-3">
           <div>
             <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
-            <input class="form-control" name="nom" placeholder="ex. Anis Ben..." required>
+            <input class="form-control" name="nom" placeholder="ex. Anis Ben..."
+              value="{{ enfant_to_edit.nom if enfant_to_edit else '' }}" required>
           </div>
           <div class="row">
             <div class="col">
               <label class="form-label small text-muted fw-bold">AGE</label>
-              <input type="number" name="age" class="form-control" placeholder="ans" required>
+              <input type="number" name="age" class="form-control" placeholder="ans"
+                value="{{ enfant_to_edit.age if enfant_to_edit else '' }}" required>
             </div>
             <div class="col">
               <label class="form-label small text-muted fw-bold">GENRE</label>
               <select name="gender" class="form-select">
-                <option value="G">Garçon</option>
-                <option value="F">Fille</option>
+                <option value="G" {% if enfant_to_edit and enfant_to_edit.gender=='G' %}selected{% endif %}>Garçon
+                </option>
+                <option value="F" {% if enfant_to_edit and enfant_to_edit.gender=='F' %}selected{% endif %}>Fille
+                </option>
               </select>
             </div>
           </div>
@@ -47,7 +57,8 @@
             <select name="parent_id" class="form-select">
               <option value="">-- Sélectionner Parent --</option>
               {% for p in all_parents %}
-              <option value="{{ p._id }}">{{ p.nom }}</option>
+              <option value="{{ p._id }}" {% if enfant_to_edit and enfant_to_edit.parent_id|string==p._id|string
+                %}selected{% endif %}>{{ p.nom }}</option>
               {% endfor %}
             </select>
           </div>
@@ -56,15 +67,30 @@
             <select name="group_id" class="form-select">
               <option value="">-- Sélectionner Groupe --</option>
               {% for g in all_groups %}
-              <option value="{{ g._id }}">{{ g.nom }}</option>
+              <option value="{{ g._id }}" {% if enfant_to_edit and enfant_to_edit.group_id|string==g._id|string
+                %}selected{% endif %}>{{ g.nom }}</option>
               {% endfor %}
             </select>
           </div>
           <div>
             <label class="form-label small text-muted fw-bold">ALLERGIES</label>
-            <input class="form-control" name="allergies" placeholder="ex. Arachides, Lait (séparer par virgule)">
+            <input class="form-control" name="allergies" placeholder="ex. Arachides, Lait"
+              value="{{ enfant_to_edit.allergies|join(', ') if enfant_to_edit and enfant_to_edit.allergies else '' }}">
           </div>
-          <button class="btn btn-primary mt-2">Inscrire</button>
+
+          <button class="btn btn-primary mt-2">
+            {% if enfant_to_edit %}
+            Mettre à jour
+            {% else %}
+            Inscrire
+            {% endif %}
+          </button>
+
+          {% if enfant_to_edit %}
+          <a href="{{ url_for('enfants_bp.list_enfants') }}" class="btn btn-outline-secondary">
+            Annuler
+          </a>
+          {% endif %}
         </form>
       </div>
     </div>
@@ -121,9 +147,17 @@
                   </td>
                   <td class="text-end pe-4">
                     {% if current_user.role == 'admin' %}
-                    <a href="/enfants/delete/{{ e._id }}" class="btn btn-outline-danger btn-sm"
+                    <a href="/enfants/edit/{{ e._id }}" class="btn btn-sm btn-outline-warning me-1">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                    <a href="/enfants/delete/{{ e._id }}" class="btn btn-sm btn-outline-danger"
                       onclick="return confirm('Confirmer la suppression ?')">
-                      Supprimer
+                      <i class="bi bi-trash"></i>
+                    </a>
+                    {% elif current_user.role == 'parent' %}
+                    <a href="/nutrition/plans/{{ e._id }}" class="btn btn-sm btn-outline-info"
+                      title="Voir Plan Nutrition">
+                      <i class="bi bi-heart-pulse"></i> Nutrition
                     </a>
                     {% endif %}
                   </td>

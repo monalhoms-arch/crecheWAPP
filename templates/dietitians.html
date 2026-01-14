@@ -9,28 +9,51 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom-0 py-3">
                 <h5 class="card-title mb-0 text-primary fw-bold">
+                    {% if dietitian_to_edit %}
+                    <i class="bi bi-pencil-square me-2"></i>Modifier nutritionniste
+                    {% else %}
                     <i class="bi bi-person-plus-fill me-2"></i>Ajouter un nutritionniste
+                    {% endif %}
                 </h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('dietitians_bp.add_dietitian') }}" class="d-grid gap-3">
+                <form method="POST"
+                    action="{{ url_for('dietitians_bp.edit_dietitian', id=dietitian_to_edit._id) if dietitian_to_edit else url_for('dietitians_bp.add_dietitian') }}"
+                    class="d-grid gap-3">
                     <div>
                         <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
-                        <input class="form-control" name="nom" placeholder="ex. Dr. Sarah" required>
+                        <input class="form-control" name="nom" placeholder="ex. Dr. Sarah"
+                            value="{{ dietitian_to_edit.nom if dietitian_to_edit else '' }}" required>
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">SPÉCIALITÉ</label>
-                        <input class="form-control" name="specialite" placeholder="ex. Pédiatrique">
+                        <input class="form-control" name="specialite" placeholder="ex. Pédiatrique"
+                            value="{{ dietitian_to_edit.specialite if dietitian_to_edit else '' }}">
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">EMAIL</label>
-                        <input type="email" name="email" class="form-control" placeholder="email@exemple.com">
+                        <input type="email" name="email" class="form-control" placeholder="email@exemple.com"
+                            value="{{ dietitian_to_edit.email if dietitian_to_edit else '' }}">
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">TÉLÉPHONE</label>
-                        <input type="tel" name="telephone" class="form-control" placeholder="05 55 ...">
+                        <input type="tel" name="telephone" class="form-control" placeholder="05 55 ..."
+                            value="{{ dietitian_to_edit.telephone if dietitian_to_edit else '' }}">
                     </div>
-                    <button type="submit" class="btn btn-primary mt-2">Enregistrer</button>
+
+                    <button type="submit" class="btn btn-primary mt-2">
+                        {% if dietitian_to_edit %}
+                        Mettre à jour
+                        {% else %}
+                        Enregistrer
+                        {% endif %}
+                    </button>
+
+                    {% if dietitian_to_edit %}
+                    <a href="{{ url_for('dietitians_bp.list_dietitians') }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -63,10 +86,14 @@
                             </td>
                             <td><span class="badge bg-info bg-opacity-10 text-info">{{ d.specialite }}</span></td>
                             <td class="text-end pe-4">
+                                <a href="{{ url_for('dietitians_bp.edit_dietitian', id=d._id) }}"
+                                    class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
                                 <a href="{{ url_for('dietitians_bp.delete_dietitian', id=d._id) }}"
-                                    class="btn btn-outline-danger btn-sm"
+                                    class="btn btn-sm btn-outline-danger"
                                     onclick="return confirm('Confirmer suppression ?')">
-                                    Supprimer
+                                    <i class="bi bi-trash"></i>
                                 </a>
                             </td>
                         </tr>

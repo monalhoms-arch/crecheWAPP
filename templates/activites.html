@@ -10,29 +10,47 @@
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0 text-primary fw-bold" id="formTitle">
-                    <i class="bi bi-calendar-plus me-2" id="formIcon"></i><span id="formTitleText">Nouvelle
-                        Activité</span>
+                <h5 class="card-title mb-0 text-primary fw-bold">
+                    {% if activite_to_edit %}
+                    <i class="bi bi-pencil-square me-2"></i>Modifier l'Activité
+                    {% else %}
+                    <i class="bi bi-calendar-plus me-2"></i>Nouvelle Activité
+                    {% endif %}
                 </h5>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
-                    onclick="resetForm()">Annuler</button>
             </div>
             <div class="card-body">
-                <form method="POST" action="/activites/add" class="d-grid gap-3" id="activiteForm">
+                <form method="POST"
+                    action="{{ url_for('activites_bp.edit_activite', id=activite_to_edit._id) if activite_to_edit else url_for('activites_bp.add_activite') }}"
+                    class="d-grid gap-3">
                     <div>
                         <label class="form-label small text-muted fw-bold">TITRE</label>
-                        <input class="form-control" name="titre" id="actTitre" placeholder="ex. Peinture" required>
+                        <input class="form-control" name="titre" placeholder="ex. Peinture"
+                            value="{{ activite_to_edit.titre if activite_to_edit else '' }}" required>
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">DATE</label>
-                        <input class="form-control" name="date" id="actDate" type="date" required>
+                        <input class="form-control" name="date" type="date"
+                            value="{{ activite_to_edit.date if activite_to_edit else '' }}" required>
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">DESCRIPTION</label>
-                        <textarea class="form-control" name="description" id="actDesc" placeholder="Détails..."
-                            rows="3"></textarea>
+                        <textarea class="form-control" name="description" placeholder="Détails..."
+                            rows="3">{{ activite_to_edit.description if activite_to_edit else '' }}</textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary mt-2" id="submitBtn">Ajouter</button>
+
+                    <button type="submit" class="btn btn-primary mt-2">
+                        {% if activite_to_edit %}
+                        Mettre à jour
+                        {% else %}
+                        Ajouter
+                        {% endif %}
+                    </button>
+
+                    {% if activite_to_edit %}
+                    <a href="{{ url_for('activites_bp.list_activites') }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -57,15 +75,17 @@
                     </thead>
                     <tbody>
                         {% for a in activites %}
-                        <tr {% if current_user.role=='educateur' or current_user.role=='admin'
-                            %}onclick='loadActivityForEdit({{ a|tojson|safe }})' style="cursor: pointer;" {% endif %}
-                            class="activity-row">
+                        <tr class="activity-row">
                             <td class="ps-4 fw-bold">{{ a.titre }}</td>
                             <td><span class="text-muted small text-truncate d-inline-block" style="max-width: 200px;">{{
                                     a.description }}</span></td>
                             <td><span class="badge bg-secondary bg-opacity-10 text-dark">{{ a.date }}</span></td>
                             {% if current_user.role == 'admin' or current_user.role == 'educateur' %}
                             <td class="text-end pe-4">
+                                <a href="{{ url_for('activites_bp.edit_activite', id=a._id) }}"
+                                    class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
                                 <button class="btn btn-outline-danger btn-sm"
                                     onclick="deleteActivity('{{ a._id }}', '{{ a.titre }}', event)">
                                     <i class="bi bi-trash"></i>
@@ -124,39 +144,5 @@
         }
     });
 
-    function loadActivityForEdit(act) {
-        // Prevent row click when clicking delete button
-        if (event && event.target.closest('button')) {
-            event.stopPropagation();
-            return;
-        }
-
-        // Populate form fields
-        document.getElementById('actTitre').value = act.titre;
-        document.getElementById('actDate').value = act.date;
-        document.getElementById('actDesc').value = act.description;
-
-        // Update form action and title
-        document.getElementById('activiteForm').action = '/activites/edit/' + act._id;
-        document.getElementById('formTitleText').textContent = 'Modifier l\'Activité';
-        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
-        document.getElementById('submitBtn').textContent = 'Mettre à jour';
-        document.getElementById('submitBtn').className = 'btn btn-success mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'inline-block';
-
-        // Scroll to form
-        document.getElementById('actTitre').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function resetForm() {
-        // Reset form
-        document.getElementById('activiteForm').reset();
-        document.getElementById('activiteForm').action = '/activites/add';
-        document.getElementById('formTitleText').textContent = 'Nouvelle Activité';
-        document.getElementById('formIcon').className = 'bi bi-calendar-plus me-2';
-        document.getElementById('submitBtn').textContent = 'Ajouter';
-        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'none';
-    }
 </script>
 {% endblock %}

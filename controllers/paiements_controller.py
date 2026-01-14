@@ -222,23 +222,56 @@ def payment_webhook(id):
         )
     return '', 200
 
-@paiements_bp.route("/edit/<id>", methods=["POST"])
+@paiements_bp.route("/edit/<id>", methods=["GET", "POST"])
 @admin_required
 def edit_paiement(id):
-    try:
-        enfant_id = request.form.get("enfant_id")
-        montant = float(request.form.get("montant", 0))
-        statut = request.form.get("statut")
+    paiement = db.paiements.find_one({"_id": ObjectId(id)})
+    if not paiement:
+        flash("Paiement introuvable", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
 
-        update_data = {
-            "enfant_id": enfant_id,
-            "montant": montant,
-            "statut": statut
-        }
+    if request.method == "POST":
+        try:
+            update_data = {
+                "enfant_id": request.form.get("enfant_id"),
+                "montant": float(request.form.get("montant", 0)),
+                "statut": request.form.get("statut")
+            }
+            db.paiements.update_one({"_id": ObjectId(id)}, {"$set": update_data})
+            flash("Paiement mis à jour avec succès", "success")
+        except Exception as e:
+            flash(f"Erreur lors de la modification: {str(e)}", "error")
+        return redirect(url_for("paiements_bp.list_paiements"))
+    
+    # GET: Render list with edit context
+    # Admin only, so we show all payments usually, or same query as list_paiements
+    pays = list(db.paiements.find({}).sort("_id", -1))
+    invoices = list(db.invoices.find({}).sort("date", -1))
+    
+    enfants_map = {str(e['_id']): e['nom'] for e in db.enfants.find()}
+    all_enfants = list(db.enfants.find({}, {"_id": 1, "nom": 1}))
+    
+    # Process data for template (str IDs, dates)
+    for e in all_enfants:
+        e['_id'] = str(e['_id'])
+    for p in pays:
+        p['_id'] = str(p['_id'])
+        if isinstance(p.get('date'), datetime):
+            p['date_str'] = p['date'].strftime('%d/%m/%Y')
+        else:
+            p['date_str'] = str(p.get('date'))
+            
+    return render_template("paiements.html", 
+                         paiements=pays, 
+                         invoices=invoices, 
+                         enfants=enfants_map, 
+                         all_enfants=all_enfants,
+                         total_pending=0, # Admin doesn't need total pending usually
+                         paiement_to_edit=paiement)
 
-        db.paiements.update_one({"_id": ObjectId(id)}, {"$set": update_data})
-        flash("Paiement mis à jour avec succès", "success")
-    except Exception as e:
-        flash(f"Erreur lors de la modification: {str(e)}", "error")
-
+@paiements_bp.route("/delete/<id>")
+@admin_required
+def delete_paiement(id):
+    db.paiements.delete_one({"_id": ObjectId(id)})
+    flash("Paiement supprimé avec succès", "success")
     return redirect(url_for("paiements_bp.list_paiements"))

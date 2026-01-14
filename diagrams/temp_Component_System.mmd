@@ -1,0 +1,90 @@
+graph TB
+    subgraph Client["Client Layer"]
+        Browser[Web Browser]
+    end
+    
+    subgraph Presentation["Presentation Layer"]
+        Templates[Jinja2 Templates]
+        Static["Static Assets (CSS, JS, Images)"]
+    end
+    
+    subgraph Application["Application Layer"]
+        Flask[Flask Application]
+        
+        subgraph Controllers
+            AuthC[Auth Controller]
+            ParentC[Parents Controller]
+            EnfantC[Enfants Controller]
+            PresC[Presence Controller]
+            ActC[Activites Controller]
+            NutrC[Nutrition Controller]
+            PayC[Paiements Controller]
+            UserC[Users Controller]
+            CommC[Communication Controller]
+        end
+        
+        subgraph Logic["Business Logic"]
+            Decorators["Role Decorators (@admin_required, @role_required)"]
+            Utils[Utilities]
+        end
+    end
+    
+    subgraph Data["Data Layer"]
+        subgraph Models
+            UserM[User Model]
+            ParentM[Parent Model]
+            EnfantM[Enfant Model]
+            PresM[Presence Model]
+            ActM[Activite Model]
+            NutrM[Nutrition Models]
+            PayM[Payment Models]
+        end
+        
+        DB[("MongoDB Database")]
+    end
+    
+    subgraph External["External Services"]
+        Chargily[Chargily Payment API]
+    end
+    
+    Browser --> Flask
+    Flask --> Templates
+    Flask --> Static
+    
+    Flask --> AuthC
+    Flask --> ParentC
+    Flask --> EnfantC
+    Flask --> PresC
+    Flask --> ActC
+    Flask --> NutrC
+    Flask --> PayC
+    Flask --> UserC
+    Flask --> CommC
+    
+    AuthC --> Decorators
+    ParentC --> Decorators
+    EnfantC --> Decorators
+    PresC --> Decorators
+    ActC --> Decorators
+    NutrC --> Decorators
+    PayC --> Decorators
+    UserC --> Decorators
+    CommC --> Decorators
+    
+    AuthC --> UserM
+    ParentC --> ParentM
+    EnfantC --> EnfantM
+    PresC --> PresM
+    ActC --> ActM
+    NutrC --> NutrM
+    PayC --> PayM
+    
+    UserM --> DB
+    ParentM --> DB
+    EnfantM --> DB
+    PresM --> DB
+    ActM --> DB
+    NutrM --> DB
+    PayM --> DB
+    
+    PayC --> Chargily

@@ -9,20 +9,41 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white border-bottom-0 py-3">
         <h5 class="card-title mb-0 text-primary fw-bold">
+          {% if educateur_to_edit %}
+          <i class="bi bi-pencil-square me-2"></i>Modifier éducateur
+          {% else %}
           <i class="bi bi-person-plus-fill me-2"></i>Ajouter un éducateur
+          {% endif %}
         </h5>
       </div>
       <div class="card-body">
-        <form method="POST" action="/educateurs/add" class="d-grid gap-3">
+        <form method="POST"
+          action="{{ url_for('educateurs_bp.edit_educateur', id=educateur_to_edit._id) if educateur_to_edit else url_for('educateurs_bp.add_educateur') }}"
+          class="d-grid gap-3">
           <div>
             <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
-            <input class="form-control" name="nom" placeholder="Nom" required>
+            <input class="form-control" name="nom" placeholder="Nom"
+              value="{{ educateur_to_edit.nom if educateur_to_edit else '' }}" required>
           </div>
           <div>
             <label class="form-label small text-muted fw-bold">SPÉCIALITÉ</label>
-            <input class="form-control" name="specialite" placeholder="ex. Petite enfance">
+            <input class="form-control" name="specialite" placeholder="ex. Petite enfance"
+              value="{{ educateur_to_edit.specialite if educateur_to_edit else '' }}">
           </div>
-          <button class="btn btn-primary mt-2">Ajouter</button>
+
+          <button class="btn btn-primary mt-2">
+            {% if educateur_to_edit %}
+            Mettre à jour
+            {% else %}
+            Ajouter
+            {% endif %}
+          </button>
+
+          {% if educateur_to_edit %}
+          <a href="{{ url_for('educateurs_bp.list_educateurs') }}" class="btn btn-outline-secondary">
+            Annuler
+          </a>
+          {% endif %}
         </form>
       </div>
     </div>
@@ -50,9 +71,12 @@
               </td>
               <td><span class="badge bg-info bg-opacity-10 text-info">{{ ed.specialite }}</span></td>
               <td class="text-end pe-4">
-                <a href="/educateurs/delete/{{ ed._id }}" class="btn btn-outline-danger btn-sm"
+                <a href="/educateurs/edit/{{ ed._id }}" class="btn btn-sm btn-outline-warning me-1">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="/educateurs/delete/{{ ed._id }}" class="btn btn-sm btn-outline-danger"
                   onclick="return confirm('Supprimer cet éducateur ?')">
-                  Supprimer
+                  <i class="bi bi-trash"></i>
                 </a>
               </td>
             </tr>

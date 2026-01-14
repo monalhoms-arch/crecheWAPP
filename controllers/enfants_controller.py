@@ -61,9 +61,47 @@ def add_enfant():
         )
         db.enfants.insert_one(e.to_dict())
         return redirect(url_for("enfants_bp.list_enfants"))
-    parents = list(db.parents.find())
-    groups = list(db.groups.find())
-    return render_template("enfants_add.html", parents=parents, groups=groups)
+    return redirect(url_for("enfants_bp.list_enfants"))
+
+@enfants_bp.route("/edit/<id>", methods=["GET","POST"])
+@admin_required
+def edit_enfant(id):
+    enfant = db.enfants.find_one({"_id": ObjectId(id)})
+    if not enfant:
+        return redirect(url_for("enfants_bp.list_enfants"))
+        
+    if request.method == "POST":
+        allergies_str = request.form.get("allergies", "")
+        allergies = [a.strip() for a in allergies_str.split(',') if a.strip()]
+        
+        update_data = {
+            "nom": request.form.get("nom"),
+            "age": int(request.form.get("age", 0)),
+            "gender": request.form.get("gender"),
+            "parent_id": request.form.get("parent_id") or None,
+            "group_id": request.form.get("group_id") or None,
+            "allergies": allergies
+        }
+        db.enfants.update_one({"_id": ObjectId(id)}, {"$set": update_data})
+        return redirect(url_for("enfants_bp.list_enfants"))
+
+    # Context for rendering the list view with edit form
+    query = {}
+    if request.args.get('allergies') == 'true':
+        query["allergies"] = {"$exists": True, "$ne": []}
+    
+    enfants = list(db.enfants.find(query).sort("_id", -1))
+    parents_map = {str(p['_id']): p['nom'] for p in db.parents.find()}
+    all_parents = list(db.parents.find())
+    all_groups = list(db.groups.find())
+    
+    return render_template("enfants.html", 
+                         enfants=enfants, 
+                         parents=parents_map, 
+                         all_parents=all_parents, 
+                         all_groups=all_groups, 
+                         enfant_to_edit=enfant,
+                         show_allergies_only=request.args.get('allergies') == 'true')
 
 @enfants_bp.route("/delete/<id>")
 @admin_required

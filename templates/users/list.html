@@ -8,33 +8,43 @@
     <div class="col-md-4 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom-0 py-3" id="formCardHeader">
-                <h5 class="card-title mb-0 text-primary fw-bold" id="formTitle">
-                    <i class="bi bi-person-plus-fill me-2" id="formIcon"></i><span id="formTitleText">Nouveau
-                        compte</span>
+                <h5 class="card-title mb-0 text-primary fw-bold">
+                    {% if user_to_edit %}
+                    <i class="bi bi-pencil-fill me-2"></i>Modifier le compte
+                    {% else %}
+                    <i class="bi bi-person-plus-fill me-2"></i>Nouveau compte
+                    {% endif %}
                 </h5>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
-                    onclick="resetForm()">Annuler</button>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('users_bp.add_user') }}" class="d-grid gap-3" id="userForm">
-                    <input type="hidden" name="user_id" id="userId" value="">
+                <form method="POST"
+                    action="{{ url_for('users_bp.edit_user', id=user_to_edit._id) if user_to_edit else url_for('users_bp.add_user') }}"
+                    class="d-grid gap-3" id="userForm">
+                    <input type="hidden" name="user_id" value="{{ user_to_edit._id if user_to_edit else '' }}">
                     <div>
                         <label class="form-label small text-muted fw-bold">NOM D'UTILISATEUR</label>
-                        <input type="text" name="username" id="usernameInput" class="form-control" autocomplete="off"
-                            required>
+                        <input type="text" name="username" class="form-control" autocomplete="off"
+                            value="{{ user_to_edit.username if user_to_edit else '' }}" required>
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">MOT DE PASSE</label>
-                        <input type="password" name="password" id="passwordInput" class="form-control"
-                            autocomplete="new-password" required id="passwordField">
+                        <input type="password" name="password" class="form-control" autocomplete="new-password" {% if
+                            not user_to_edit %}required{% endif %}>
+                        {% if user_to_edit %}
+                        <div class="form-text small">Laisser vide pour ne pas modifier.</div>
+                        {% endif %}
                     </div>
                     <div>
                         <label class="form-label small text-muted fw-bold">RÔLE</label>
                         <select name="role" class="form-select" id="roleSelect" onchange="toggleRelated()" required>
-                            <option value="admin">Admin</option>
-                            <option value="parent">Parent</option>
-                            <option value="educateur">Éducateur</option>
-                            <option value="dietitian">Diététicien</option>
+                            <option value="admin" {% if user_to_edit and user_to_edit.role=='admin' %}selected{% endif
+                                %}>Admin</option>
+                            <option value="parent" {% if user_to_edit and user_to_edit.role=='parent' %}selected{% endif
+                                %}>Parent</option>
+                            <option value="educateur" {% if user_to_edit and user_to_edit.role=='educateur' %}selected{%
+                                endif %}>Éducateur</option>
+                            <option value="dietitian" {% if user_to_edit and user_to_edit.role=='dietitian' %}selected{%
+                                endif %}>Diététicien</option>
                         </select>
                     </div>
 
@@ -44,7 +54,8 @@
                         <select name="related_id_parent" class="form-select" onchange="setRelated(this.value)">
                             <option value="">-- Sélectionner --</option>
                             {% for p in parents %}
-                            <option value="{{ p._id }}">{{ p.nom }}</option>
+                            <option value="{{ p._id }}" {% if user_to_edit and
+                                user_to_edit.related_id|string==p._id|string %}selected{% endif %}>{{ p.nom }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -53,7 +64,8 @@
                         <select name="related_id_ed" class="form-select" onchange="setRelated(this.value)">
                             <option value="">-- Sélectionner --</option>
                             {% for e in educateurs %}
-                            <option value="{{ e._id }}">{{ e.nom }}</option>
+                            <option value="{{ e._id }}" {% if user_to_edit and
+                                user_to_edit.related_id|string==e._id|string %}selected{% endif %}>{{ e.nom }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -63,15 +75,29 @@
                         <select name="related_id_diet" class="form-select" onchange="setRelated(this.value)">
                             <option value="">-- Sélectionner --</option>
                             {% for d in dietitians %}
-                            <option value="{{ d._id }}">{{ d.nom }}</option>
+                            <option value="{{ d._id }}" {% if user_to_edit and
+                                user_to_edit.related_id|string==d._id|string %}selected{% endif %}>{{ d.nom }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <!-- Hidden Input for actual related_id submission -->
-                    <input type="hidden" name="related_id" id="related_id_final">
+                    <input type="hidden" name="related_id" id="related_id_final"
+                        value="{{ user_to_edit.related_id if user_to_edit else '' }}">
 
-                    <button type="submit" class="btn btn-primary mt-2" id="submitBtn">Créer le compte</button>
+                    <button type="submit" class="btn btn-primary mt-2">
+                        {% if user_to_edit %}
+                        Mettre à jour
+                        {% else %}
+                        Créer le compte
+                        {% endif %}
+                    </button>
+
+                    {% if user_to_edit %}
+                    <a href="{{ url_for('users_bp.list_users') }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -91,9 +117,7 @@
                     </thead>
                     <tbody>
                         {% for u in users %}
-                        <tr {% if u.username !='admin' and u.username !=current_user.username
-                            %}onclick='loadUserForEdit({{ u|tojson|safe }})' style="cursor: pointer;" {% endif %}
-                            class="user-row">
+                        <tr class="user-row">
                             <td class="ps-4">
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-3">{{ u.username[0]|upper }}</div>
@@ -125,9 +149,13 @@
                             </td>
                             <td class="text-end pe-4">
                                 {% if u.username != 'admin' and u.username != current_user.username %}
+                                <a href="{{ url_for('users_bp.edit_user', id=u._id) }}"
+                                    class="btn btn-sm btn-outline-warning me-1">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
                                 <button class="btn btn-outline-danger btn-sm"
                                     onclick="deleteUser('{{ u._id|string }}', '{{ u.username }}')">
-                                    Supprimer
+                                    <i class="bi bi-trash"></i>
                                 </button>
                                 {% else %}
                                 <span class="text-muted small"><i class="bi bi-lock-fill"></i> Protégé</span>
@@ -178,81 +206,26 @@
         }
     });
 
-    function loadUserForEdit(user) {
-        // Prevent row click when clicking delete button
-        if (event && event.target.closest('button')) {
-            event.stopPropagation();
-            return;
-        }
-
-        // Populate form fields
-        document.getElementById('usernameInput').value = user.username;
-        document.getElementById('passwordInput').value = '';
-        document.getElementById('passwordInput').removeAttribute('required');
-        document.getElementById('roleSelect').value = user.role;
-        document.getElementById('related_id_final').value = user.related_id || '';
-
-        // Update form action and title
-        document.getElementById('userForm').action = '/users/edit/' + user._id;
-        document.getElementById('formTitleText').textContent = 'Modifier le compte';
-        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
-        document.getElementById('submitBtn').textContent = 'Mettre à jour';
-        document.getElementById('submitBtn').className = 'btn btn-success mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'inline-block';
-
-        // Trigger related field visibility
-        toggleRelated();
-
-        // Set related_id in appropriate dropdown
-        if (user.role === 'parent') {
-            document.getElementsByName('related_id_parent')[0].value = user.related_id || '';
-        } else if (user.role === 'educateur') {
-            document.getElementsByName('related_id_ed')[0].value = user.related_id || '';
-        } else if (user.role === 'dietitian') {
-            document.getElementsByName('related_id_diet')[0].value = user.related_id || '';
-        }
-
-        // Scroll to form
-        document.getElementById('formCardHeader').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function resetForm() {
-        // Reset form
-        document.getElementById('userForm').reset();
-        document.getElementById('userForm').action = '{{ url_for("users_bp.add_user") }}';
-        document.getElementById('formTitleText').textContent = 'Nouveau compte';
-        document.getElementById('formIcon').className = 'bi bi-person-plus-fill me-2';
-        document.getElementById('submitBtn').textContent = 'Créer le compte';
-        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'none';
-        document.getElementById('passwordInput').setAttribute('required', 'required');
-        document.getElementById('related_id_final').value = '';
-
-        // Hide all related selects
-        document.getElementById('parentSelect').style.display = 'none';
-        document.getElementById('educateurSelect').style.display = 'none';
-        document.getElementById('dietitianSelect').style.display = 'none';
-    }
-
-
     function toggleRelated() {
         var role = document.getElementById("roleSelect").value;
         document.getElementById("parentSelect").style.display = (role === 'parent') ? 'block' : 'none';
         document.getElementById("educateurSelect").style.display = (role === 'educateur') ? 'block' : 'none';
         document.getElementById("dietitianSelect").style.display = (role === 'dietitian') ? 'block' : 'none';
 
-        // Clear related ID when switching roles to avoid mismatch
-        document.getElementById("related_id_final").value = "";
-
-        // Reset selects
-        document.getElementsByName("related_id_parent")[0].value = "";
-        document.getElementsByName("related_id_ed")[0].value = "";
-        document.getElementsByName("related_id_diet")[0].value = "";
+        // Note: We do NOT clear values here anymore because we want to preserve them during edit.
+        // But if user manually switches role, maybe they should be cleared? 
+        // For simplicity and "edit mode" correctness, we avoid auto-clearing.
+        // Users can manually change the selection if they switch role.
     }
 
     function setRelated(val) {
         document.getElementById("related_id_final").value = val;
     }
+
+    // Initialize related fields visibility
+    document.addEventListener('DOMContentLoaded', function () {
+        toggleRelated();
+    });
 </script>
 
 <style>

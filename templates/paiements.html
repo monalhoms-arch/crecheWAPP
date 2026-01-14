@@ -25,42 +25,58 @@
     <!-- Add/Edit Payment Form (Admin Only) -->
     {% if current_user.role == 'admin' %}
     <div class="col-md-4 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-white border-bottom-0 py-3 d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0 text-primary fw-bold" id="formTitle">
-                    <i class="bi bi-credit-card-2-front me-2" id="formIcon"></i><span id="formTitleText">Nouveau
-                        Paiement</span>
-                </h5>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="cancelEditBtn" style="display: none;"
-                    onclick="resetForm()">Annuler</button>
-            </div>
-            <div class="card-body">
-                <form method="POST" action="{{ url_for('paiements_bp.add_paiement') }}" class="d-grid gap-3"
-                    id="payForm">
-                    <div>
-                        <label class="form-label small text-muted fw-bold">ENFANT</label>
-                        <select name="enfant_id" id="payEnfantId" class="form-select" required>
-                            <option value="">-- Sélectionner --</option>
-                            {% for e in all_enfants %}
-                            <option value="{{ e._id }}">{{ e.nom }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label small text-muted fw-bold">MONTANT (€)</label>
-                        <input type="number" name="montant" id="payMontant" class="form-control"
-                            placeholder="ex. 150.00" step="0.01" required>
-                    </div>
-                    <div>
-                        <label class="form-label small text-muted fw-bold">STATUT</label>
-                        <select name="statut" id="payStatut" class="form-select">
-                            <option value="paye">Payé (Reçu)</option>
-                            <option value="en_attente">En attente (Non payé)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary mt-2" id="submitBtn">Enregistrer Paiement</button>
-                </form>
-            </div>
+        <div class="card-header bg-white border-bottom-0 py-3">
+            <h5 class="card-title mb-0 text-primary fw-bold">
+                {% if paiement_to_edit %}
+                <i class="bi bi-pencil-square me-2"></i>Modifier le paiement
+                {% else %}
+                <i class="bi bi-credit-card-2-front me-2"></i>Nouveau Paiement
+                {% endif %}
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="POST"
+                action="{{ url_for('paiements_bp.edit_paiement', id=paiement_to_edit._id) if paiement_to_edit else url_for('paiements_bp.add_paiement') }}"
+                class="d-grid gap-3">
+                <div>
+                    <label class="form-label small text-muted fw-bold">ENFANT</label>
+                    <select name="enfant_id" class="form-select" required>
+                        <option value="">-- Sélectionner --</option>
+                        {% for e in all_enfants %}
+                        <option value="{{ e._id }}" {% if paiement_to_edit and
+                            paiement_to_edit.enfant_id|string==e._id|string %}selected{% endif %}>{{ e.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label class="form-label small text-muted fw-bold">MONTANT (€)</label>
+                    <input type="number" name="montant" class="form-control" placeholder="ex. 150.00" step="0.01"
+                        value="{{ paiement_to_edit.montant if paiement_to_edit else '' }}" required>
+                </div>
+                <div>
+                    <label class="form-label small text-muted fw-bold">STATUT</label>
+                    <select name="statut" class="form-select">
+                        <option value="paye" {% if paiement_to_edit and paiement_to_edit.statut=='paye' %}selected{%
+                            endif %}>Payé (Reçu)</option>
+                        <option value="en_attente" {% if paiement_to_edit and paiement_to_edit.statut=='en_attente'
+                            %}selected{% endif %}>En attente (Non payé)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary mt-2">
+                    {% if paiement_to_edit %}
+                    Mettre à jour
+                    {% else %}
+                    Enregistrer Paiement
+                    {% endif %}
+                </button>
+
+                {% if paiement_to_edit %}
+                <a href="{{ url_for('paiements_bp.list_paiements') }}" class="btn btn-outline-secondary">
+                    Annuler
+                </a>
+                {% endif %}
+            </form>
         </div>
     </div>
     {% endif %}
@@ -83,11 +99,10 @@
                     </thead>
                     <tbody>
                         {% for p in paiements %}
-                        <tr {% if current_user.role=='admin' %}onclick='loadPaymentForEdit({{ p|tojson|safe }})'
-                            style="cursor: pointer;" {% endif %} class="payment-row">
+                        <tr>
                             <td class="ps-4 fw-bold text-dark">{{ enfants.get(p.enfant_id, 'Inconnu') }}</td>
                             <td class="fw-bold text-success">{{ p.montant }} €</td>
-                            <td>{{ p.date.strftime('%d/%m/%Y') if p.date is iterable else p.date }}</td>
+                            <td>{{ p.date_str }}</td>
                             <td class="text-end pe-4">
                                 {% if p.statut == 'en_attente' %}
                                 <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill me-2">En
@@ -104,6 +119,19 @@
                                 {% endif %}
                                 {% else %}
                                 <span class="badge bg-success bg-opacity-10 text-success rounded-pill">Payé</span>
+                                {% endif %}
+
+                                {% if current_user.role == 'admin' %}
+                                <div class="d-inline-block ms-2">
+                                    <a href="{{ url_for('paiements_bp.edit_paiement', id=p._id) }}"
+                                        class="btn btn-sm btn-outline-warning">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button class="btn btn-sm btn-outline-danger ms-1"
+                                        onclick="deletePayment('{{ p._id }}', '{{ p.montant }}')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                                 {% endif %}
                             </td>
                         </tr>
@@ -157,33 +185,42 @@
     </div>
 </div>
 
+
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteModalLabel">Confirmer la suppression</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Êtes-vous sûr de vouloir supprimer le paiement de <strong id="deleteAmount"></strong> € ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    function loadPaymentForEdit(pay) {
-        // Prevent action if clicking on buttons
-        if (event && event.target.closest('a')) return;
+    let payIdToDelete = null;
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
 
-        document.getElementById('payEnfantId').value = pay.enfant_id;
-        document.getElementById('payMontant').value = pay.montant;
-        document.getElementById('payStatut').value = pay.statut;
-
-        document.getElementById('payForm').action = '/paiements/edit/' + pay._id;
-        document.getElementById('formTitleText').textContent = 'Modifier le paiement';
-        document.getElementById('formIcon').className = 'bi bi-pencil-fill me-2';
-        document.getElementById('submitBtn').textContent = 'Mettre à jour';
-        document.getElementById('submitBtn').className = 'btn btn-success mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'inline-block';
-
-        document.getElementById('formTitle').scrollIntoView({ behavior: 'smooth' });
+    function deletePayment(payId, amount) {
+        payIdToDelete = payId;
+        document.getElementById('deleteAmount').textContent = amount;
+        deleteModal.show();
     }
 
-    function resetForm() {
-        document.getElementById('payForm').reset();
-        document.getElementById('payForm').action = "{{ url_for('paiements_bp.add_paiement') }}";
-        document.getElementById('formTitleText').textContent = 'Nouveau Paiement';
-        document.getElementById('formIcon').className = 'bi bi-credit-card-2-front me-2';
-        document.getElementById('submitBtn').textContent = 'Enregistrer Paiement';
-        document.getElementById('submitBtn').className = 'btn btn-primary mt-2';
-        document.getElementById('cancelEditBtn').style.display = 'none';
-    }
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+        if (payIdToDelete) {
+            window.location.href = '/paiements/delete/' + payIdToDelete;
+        }
+    });
 </script>
 {% endblock %}

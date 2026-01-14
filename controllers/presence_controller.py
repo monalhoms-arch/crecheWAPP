@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from bson.objectid import ObjectId
-from datetime import datetime
+from datetime import datetime, date as date_obj
 from flask_login import current_user
 from db import db
 from models.presence import Presence
@@ -11,68 +11,164 @@ presence_bp = Blueprint("presence_bp", __name__, template_folder="../templates")
 @presence_bp.route("/", methods=["GET"])
 @role_required(['admin', 'educateur', 'parent'])
 def list_presences():
-    date = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
-    query = {"date": date}
+    # Default to today
+    selected_date_str = request.args.get("date", datetime.now().strftime("%Y-%m-%d"))
+    edit_id = request.args.get("edit_id")
     
+    # Future Date Validation (Backend)
+    if selected_date_str > datetime.now().strftime("%Y-%m-%d"):
+        flash("Impossible de consulter ou modifier des présences futures.", "warning")
+        return redirect(url_for("presence_bp.list_presences")) # Defaults to today
+
+    # 1. Fetch Children based on Role
+    children_query = {}
     if current_user.role == 'parent':
         if not current_user.related_id:
-            # No linked profile
-            return render_template("presences.html", presences=[], enfants={}, date=date)
-        
-        # Get parent's children IDs
-        my_children = list(db.enfants.find({"parent_id": current_user.related_id}))
-        child_ids = [str(c['_id']) for c in my_children]
-        
-        # Filter presences for these children
-        query["enfant_id"] = {"$in": child_ids}
-        
-    pres = list(db.presences.find(query).sort("_id", -1))
+             return render_template("presences.html", register=[], stats={}, date=selected_date_str)
+        children_query["parent_id"] = current_user.related_id
+    elif current_user.role == 'educateur':
+        # Optionally filter by educateur's group if strictly enforced
+        pass 
+
+    all_children = list(db.enfants.find(children_query))
     
-    enfants = {str(e['_id']): e['nom'] for e in db.enfants.find()}
-    return render_template("presences.html", presences=pres, enfants=enfants, date=date)
-
-@presence_bp.route("/add", methods=["GET","POST"])
-@role_required(['educateur'])
-def add_presence():
-    if request.method == "POST":
-        enfant_id = request.form.get("enfant_id")
-        statut = request.form.get("statut")
-        date = request.form.get("date") or datetime.now().strftime("%Y-%m-%d")
+    # 2. Fetch Presences for selected date
+    presence_query = {"date": selected_date_str}
+    if current_user.role == 'parent':
+         # Parents only see their kids' presences
+         child_ids = [str(c['_id']) for c in all_children]
+         presence_query["enfant_id"] = {"$in": child_ids}
+         
+    presences_list = list(db.presences.find(presence_query))
+    
+    # Check for edit context
+    presence_to_edit = None
+    if edit_id:
+        # Find the specific presence
+        # We search in the list first to avoid extra DB call, or just DB call?
+        # DB call is safer
+        presence_to_edit = db.presences.find_one({"_id": ObjectId(edit_id)})
+        if presence_to_edit:
+             presence_to_edit['_id'] = str(presence_to_edit['_id'])
+    
+    # 3. Merge Data (Register View)
+    presence_map = {p['enfant_id']: p for p in presences_list}
+    
+    register = []
+    stats = {"present": 0, "absent": 0, "retard": 0, "total": len(all_children)}
+    
+    for child in all_children:
+        child_id = str(child['_id'])
+        p = presence_map.get(child_id)
         
-        # DEBUG LOGGING
-        print(f"DEBUG: add_presence POST. enfant_id='{enfant_id}' (type={type(enfant_id)}), statut='{statut}'")
+        # Prepare row data
+        row = {
+            "child": child,
+            "presence": p, # Can be None
+            "status": p['statut'] if p else 'non_defini'
+        }
         
-        # Validation: Check for None, empty string, or "None" string
-        if not enfant_id or enfant_id == "None":
-            flash("Veuillez sélectionner un enfant", "error")
-            return redirect(url_for("presence_bp.list_presences", date=date))
-
-        try:
-            # Verify child exists (extra safety)
-            if not ObjectId.is_valid(enfant_id):
-                 flash(f"ID Enfant invalide: {enfant_id}", "error")
-                 return redirect(url_for("presence_bp.list_presences", date=date))
-
-            enfant = db.enfants.find_one({'_id': ObjectId(enfant_id)})
-            if not enfant:
-                flash("Enfant introuvable", "error")
-                return redirect(url_for("presence_bp.list_presences", date=date))
+        # Update Stats
+        if p:
+            if p['statut'] in stats:
+                stats[p['statut']] += 1
                 
-            nom_enfant = enfant['nom']
-            
-            # Upsert: Update if exists, otherwise Insert
-            db.presences.update_one(
-                {"enfant_id": enfant_id, "date": date},
-                {"$set": {"statut": statut, "nom_enfant": nom_enfant}},
-                upsert=True
-            )
-            flash("Présence mise à jour", "success")
-            
-        except Exception as e:
-            print(f"EXCEPTION in add_presence: {e}")
-            flash(f"Erreur lors de l'enregistrement: {str(e)}", "error")
-            
-        return redirect(url_for("presence_bp.list_presences", date=date))
+        register.append(row)
+        
+    return render_template("presences.html", 
+                         register=register, 
+                         stats=stats, 
+                         date=selected_date_str,
+                         today=datetime.now().strftime("%Y-%m-%d"),
+                         presence_to_edit=presence_to_edit)
+
+@presence_bp.route("/add", methods=["POST"])
+@role_required(['educateur', 'admin'])
+def add_presence():
+    enfant_id = request.form.get("enfant_id")
+    statut = request.form.get("statut")
+    selected_date = request.form.get("date")
+    heure_arrivee = request.form.get("heure_arrivee")
+    heure_depart = request.form.get("heure_depart")
+
+    # validation
+    if selected_date > datetime.now().strftime("%Y-%m-%d"):
+        flash("Erreur: Date future interdite.", "error")
+        return redirect(url_for("presence_bp.list_presences"))
+
+    if not enfant_id:
+        flash("Enfant requis", "error")
+        return redirect(url_for("presence_bp.list_presences", date=selected_date))
+
+    # Fetch child name
+    child = db.enfants.find_one({"_id": ObjectId(enfant_id)})
+    if not child:
+        flash("Enfant introuvable", "error")
+        return redirect(url_for("presence_bp.list_presences", date=selected_date))
+        
+    update_data = {
+        "statut": statut,
+        "nom_enfant": child['nom'],
+        "heure_arrivee": heure_arrivee,
+        "heure_depart": heure_depart
+    }
+
+    db.presences.update_one(
+        {"enfant_id": enfant_id, "date": selected_date},
+        {"$set": update_data},
+        upsert=True
+    )
     
-    # Get method should just redirect back to list
-    return redirect(url_for("presence_bp.list_presences"))
+    flash("Présence enregistrée", "success")
+    return redirect(url_for("presence_bp.list_presences", date=selected_date))
+    
+@presence_bp.route("/edit/<id>", methods=["GET", "POST"])
+@role_required(['educateur', 'admin'])
+def edit_presence(id):
+    # This route might be less used now if we use the main register view, 
+    # but keeping it for the Edit button on the row.
+    p = db.presences.find_one({"_id": ObjectId(id)})
+    if not p:
+        flash("Introuvable", "error")
+        return redirect(url_for("presence_bp.list_presences"))
+        
+    if request.method == "POST":
+        statut = request.form.get("statut")
+        heure_arrivee = request.form.get("heure_arrivee")
+        heure_depart = request.form.get("heure_depart")
+        
+        db.presences.update_one(
+            {"_id": ObjectId(id)},
+            {"$set": {
+                "statut": statut,
+                "heure_arrivee": heure_arrivee,
+                "heure_depart": heure_depart
+            }}
+        )
+        flash("Mis à jour", "success")
+        return redirect(url_for("presence_bp.list_presences", date=p['date']))
+
+    # To render the edit VIEW properly with the new merged logic, 
+    # we need to redirect to list_presence with a special flag or just use the modal logic?
+    # Actually, the previous implementation rendered the list with `presence_to_edit`.
+    # Let's adapt list_presences to handle this context if passed?
+    # Or cleaner: Since I'm doing a Register View, maybe the "Edit" is just 
+    # re-opening the "Add" form (which is an Upsert) but pre-filled?
+    # BUT, `edit_presence` logic is slightly different (takes ID).
+    # Let's keep it simple: Re-use list_presences logic but pass `presence_to_edit`.
+    
+    # Call list_presences logic manually (refactoring into a helper would be best, but copy-paste for now is safer for tool reliance)
+    # Actually, let's just Redirect to list and pass 'edit_id' param?
+    # No, that requires template logic.
+    
+    # Let's fetch the data needed for list_presences
+    selected_date_str = p['date']
+    
+    # ... (Same fetch logic as list_presences) ...
+    # RE-IMPLEMENTATION of list_presences logic here is risky for code duplication.
+    # BETTER: Render `presences.html` with the minimal needed + presence_to_edit
+    # But presences.html EXPECTS `register` list.
+    
+    # Let's Redirect to main list with `edit_id` as query param?
+    # And handle `edit_id` in `list_presences`.
+    return redirect(url_for("presence_bp.list_presences", date=selected_date_str, edit_id=id))

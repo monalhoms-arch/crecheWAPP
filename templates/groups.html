@@ -10,24 +10,32 @@
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white border-bottom-0 py-3">
                 <h5 class="card-title mb-0 text-primary fw-bold">
+                    {% if group_to_edit %}
+                    <i class="bi bi-pencil-square me-2"></i>Modifier Groupe
+                    {% else %}
                     <i class="bi bi-plus-circle me-2"></i>Nouveau Groupe
+                    {% endif %}
                 </h5>
             </div>
             <div class="card-body">
-                <form action="{{ url_for('groups_bp.add_group') }}" method="POST" class="d-grid gap-3">
+                <form method="POST"
+                    action="{{ url_for('groups_bp.edit_group', id=group_to_edit._id) if group_to_edit else url_for('groups_bp.add_group') }}"
+                    class="d-grid gap-3">
                     <div>
                         <label class="form-label small text-muted fw-bold">NOM DU GROUPE</label>
                         <input type="text" name="nom" class="form-control" placeholder="ex. Les Petits-Poussins"
-                            required>
+                            value="{{ group_to_edit.nom if group_to_edit else '' }}" required>
                     </div>
                     <div class="row">
                         <div class="col">
                             <label class="form-label small text-muted fw-bold">CAPACITÉ</label>
-                            <input type="number" name="capacity" class="form-control" placeholder="ex. 15" required>
+                            <input type="number" name="capacity" class="form-control" placeholder="ex. 15"
+                                value="{{ group_to_edit.capacity if group_to_edit else '' }}" required>
                         </div>
                         <div class="col">
                             <label class="form-label small text-muted fw-bold">AGE</label>
-                            <input type="text" name="age_range" class="form-control" placeholder="ex. 2-4" required>
+                            <input type="text" name="age_range" class="form-control" placeholder="ex. 2-4"
+                                value="{{ group_to_edit.age_range if group_to_edit else '' }}" required>
                         </div>
                     </div>
                     <div>
@@ -35,11 +43,26 @@
                         <select name="educateur_id" class="form-select">
                             <option value="">-- Sélectionner --</option>
                             {% for ed in educateurs_list %}
-                            <option value="{{ ed._id }}">{{ ed.nom }}</option>
+                            <option value="{{ ed._id }}" {% if group_to_edit and
+                                group_to_edit.educateur_id|string==ed._id|string %}selected{% endif %}>{{ ed.nom }}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
-                    <button type="submit" class="btn btn-primary mt-2">Créer le groupe</button>
+
+                    <button type="submit" class="btn btn-primary mt-2">
+                        {% if group_to_edit %}
+                        Mettre à jour
+                        {% else %}
+                        Créer le groupe
+                        {% endif %}
+                    </button>
+
+                    {% if group_to_edit %}
+                    <a href="{{ url_for('groups_bp.list_groups') }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                    {% endif %}
                 </form>
             </div>
         </div>
@@ -82,9 +105,15 @@
                                     </td>
                                     {% if current_user.role == 'admin' %}
                                     <td class="text-end pe-4">
+                                        <a href="{{ url_for('groups_bp.edit_group', id=g._id) }}"
+                                            class="btn btn-sm btn-outline-warning me-1">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
                                         <a href="{{ url_for('groups_bp.delete_group', id=g._id) }}"
-                                            class="btn btn-outline-danger btn-sm"
-                                            onclick="return confirm('Confirmer la suppression ?')">Supprimer</a>
+                                            class="btn btn-sm btn-outline-danger"
+                                            onclick="return confirm('Confirmer la suppression ?')">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
                                     </td>
                                     {% endif %}
                                 </tr>

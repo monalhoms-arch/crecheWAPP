@@ -9,24 +9,46 @@
     <div class="card border-0 shadow-sm h-100">
       <div class="card-header bg-white border-bottom-0 py-3">
         <h5 class="card-title mb-0 text-primary fw-bold">
+          {% if parent_to_edit %}
+          <i class="bi bi-pencil-square me-2"></i>Modifier parent
+          {% else %}
           <i class="bi bi-person-plus-fill me-2"></i>Ajouter un parent
+          {% endif %}
         </h5>
       </div>
       <div class="card-body">
-        <form method="POST" action="/parents/add" class="d-grid gap-3">
+        <form method="POST"
+          action="{{ url_for('parents_bp.edit_parent', id=parent_to_edit._id) if parent_to_edit else url_for('parents_bp.add_parent') }}"
+          class="d-grid gap-3">
           <div>
             <label class="form-label small text-muted fw-bold">NOM COMPLET</label>
-            <input class="form-control" name="nom" placeholder="ex. M. Ahmed" required>
+            <input class="form-control" name="nom" placeholder="ex. M. Ahmed"
+              value="{{ parent_to_edit.nom if parent_to_edit else '' }}" required>
           </div>
           <div>
             <label class="form-label small text-muted fw-bold">EMAIL</label>
-            <input class="form-control" name="email" placeholder="email@exemple.com">
+            <input class="form-control" name="email" placeholder="email@exemple.com"
+              value="{{ parent_to_edit.email if parent_to_edit else '' }}">
           </div>
           <div>
             <label class="form-label small text-muted fw-bold">TÉLÉPHONE</label>
-            <input class="form-control" name="telephone" placeholder="05 55 ...">
+            <input class="form-control" name="telephone" placeholder="05 55 ..."
+              value="{{ parent_to_edit.telephone if parent_to_edit else '' }}">
           </div>
-          <button class="btn btn-primary mt-2">Enregistrer</button>
+
+          <button class="btn btn-primary mt-2">
+            {% if parent_to_edit %}
+            Mettre à jour
+            {% else %}
+            Enregistrer
+            {% endif %}
+          </button>
+
+          {% if parent_to_edit %}
+          <a href="{{ url_for('parents_bp.list_parents') }}" class="btn btn-outline-secondary">
+            Annuler
+          </a>
+          {% endif %}
         </form>
       </div>
     </div>

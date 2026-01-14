@@ -22,6 +22,23 @@ def add_educateur():
         db.educateurs.insert_one(ed.to_dict())
     return redirect(url_for("educateurs_bp.list_educateurs"))
 
+@educateurs_bp.route("/edit/<id>", methods=["GET","POST"])
+@admin_required
+def edit_educateur(id):
+    educateur = db.educateurs.find_one({"_id": ObjectId(id)})
+    if not educateur:
+        return redirect(url_for("educateurs_bp.list_educateurs"))
+        
+    if request.method == "POST":
+        db.educateurs.update_one({"_id": ObjectId(id)}, {"$set": {
+            "nom": request.form.get("nom"),
+            "specialite": request.form.get("specialite","")
+        }})
+        return redirect(url_for("educateurs_bp.list_educateurs"))
+        
+    eds = list(db.educateurs.find().sort("_id", -1))
+    return render_template("educateurs.html", educateurs=eds, educateur_to_edit=educateur)
+
 @educateurs_bp.route("/delete/<id>")
 @admin_required
 def delete_educateur(id):

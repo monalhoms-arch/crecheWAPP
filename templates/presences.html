@@ -5,55 +5,134 @@
   <div class="text-muted small">Date: {{ date }}</div>
 </div>
 
+<!-- Stats Bar -->
+<div class="row mb-4">
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-success bg-opacity-10">
+      <div class="card-body text-center py-2">
+        <h6 class="text-success mb-0 fw-bold">Présents</h6>
+        <span class="fs-4 fw-bold text-success">{{ stats.present }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-danger bg-opacity-10">
+      <div class="card-body text-center py-2">
+        <h6 class="text-danger mb-0 fw-bold">Absents</h6>
+        <span class="fs-4 fw-bold text-danger">{{ stats.absent }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-warning bg-opacity-10">
+      <div class="card-body text-center py-2">
+        <h6 class="text-warning mb-0 fw-bold">Retards</h6>
+        <span class="fs-4 fw-bold text-warning">{{ stats.retard }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card border-0 shadow-sm bg-secondary bg-opacity-10">
+      <div class="card-body text-center py-2">
+        <h6 class="text-secondary mb-0 fw-bold">Total</h6>
+        <span class="fs-4 fw-bold text-secondary">{{ stats.total }}</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter / Add Section -->
 <div class="row">
-  <!-- Filter / Add Section -->
   <div class="col-md-4 mb-4">
     <!-- Date Filter -->
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-body">
         <form method="GET" class="d-flex gap-2">
-          <input type="date" name="date" class="form-control" value="{{ date }}">
+          <input type="date" name="date" class="form-control" value="{{ date }}" max="{{ today }}">
           <button class="btn btn-outline-primary"><i class="bi bi-filter"></i></button>
         </form>
       </div>
     </div>
 
-    {% if current_user.role == 'educateur' %}
-    <!-- Add Presence Form -->
+    {% if current_user.role == 'educateur' or current_user.role == 'admin' %}
+    <!-- Add/Edit Presence Form -->
     <div class="card border-0 shadow-sm">
       <div class="card-header bg-white border-bottom-0 py-3">
         <h5 class="card-title mb-0 text-primary fw-bold">
+          {% if presence_to_edit %}
+          <i class="bi bi-pencil-square me-2"></i>Modifier présence
+          {% else %}
           <i class="bi bi-calendar-check me-2"></i>Marquer présence
+          {% endif %}
         </h5>
       </div>
       <div class="card-body">
-        <form method="POST" action="/presences/add" class="d-grid gap-3">
+        <form method="POST"
+          action="{{ url_for('presence_bp.edit_presence', id=presence_to_edit._id) if presence_to_edit else url_for('presence_bp.add_presence') }}"
+          class="d-grid gap-3">
           <input type="hidden" name="date" value="{{ date }}">
+
           <div>
             <label class="form-label small text-muted fw-bold">ENFANT</label>
-            <select name="enfant_id" class="form-select" required>
+            <select name="enfant_id" class="form-select" required {% if presence_to_edit %}disabled{% endif %}>
               <option value="">-- Sélectionner --</option>
-              {% for id, nom in enfants.items() %}
-              <option value="{{ id }}">{{ nom }}</option>
+              {% for item in register %}
+              <option value="{{ item.child._id }}" {% if presence_to_edit and
+                presence_to_edit.enfant_id|string==item.child._id|string %}selected{% endif %}>
+                {{ item.child.nom }}
+              </option>
               {% endfor %}
             </select>
+            {% if presence_to_edit %}
+            <input type="hidden" name="enfant_id" value="{{ presence_to_edit.enfant_id }}">
+            {% endif %}
           </div>
+
           <div>
             <label class="form-label small text-muted fw-bold">STATUT</label>
             <select name="statut" class="form-select">
-              <option value="present">Présent</option>
-              <option value="absent">Absent</option>
-              <option value="retard">En retard</option>
+              <option value="present" {% if presence_to_edit and presence_to_edit.statut=='present' %}selected{% endif
+                %}>Présent</option>
+              <option value="absent" {% if presence_to_edit and presence_to_edit.statut=='absent' %}selected{% endif %}>
+                Absent</option>
+              <option value="retard" {% if presence_to_edit and presence_to_edit.statut=='retard' %}selected{% endif %}>
+                En retard</option>
             </select>
           </div>
-          <button type="submit" class="btn btn-success mt-2">Valider</button>
+
+          <div class="row">
+            <div class="col-6">
+              <label class="form-label small text-muted fw-bold">DÉBUT</label>
+              <input type="time" name="heure_arrivee" class="form-control"
+                value="{{ presence_to_edit.heure_arrivee if presence_to_edit else '' }}">
+            </div>
+            <div class="col-6">
+              <label class="form-label small text-muted fw-bold">FIN</label>
+              <input type="time" name="heure_depart" class="form-control"
+                value="{{ presence_to_edit.heure_depart if presence_to_edit else '' }}">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary mt-2">
+            {% if presence_to_edit %}
+            Mettre à jour
+            {% else %}
+            Valider
+            {% endif %}
+          </button>
+
+          {% if presence_to_edit %}
+          <a href="{{ url_for('presence_bp.list_presences', date=date) }}" class="btn btn-outline-secondary">
+            Annuler
+          </a>
+          {% endif %}
         </form>
       </div>
     </div>
     {% endif %}
   </div>
 
-  <!-- Presence List -->
+  <!-- Presence List (Register View) -->
   <div class="col-md-8">
     <div class="card border-0 shadow-sm">
       <div class="table-responsive">
@@ -61,34 +140,55 @@
           <thead class="table-light">
             <tr>
               <th class="ps-4">Enfant</th>
-              <th>Date</th>
-              <th class="text-end pe-4">Statut</th>
+              <th class="text-center">Statut</th>
+              <th class="text-center">Arrivée</th>
+              <th class="text-center">Départ</th>
+              {% if current_user.role == 'educateur' or current_user.role == 'admin' %}
+              <th class="text-end pe-4">Actions</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
-            {% for p in presences %}
+            {% for item in register %}
             <tr>
               <td class="ps-4 fw-bold">
                 <div class="d-flex align-items-center">
-                  <div class="avatar-circle me-3">{{ p.nom_enfant[0]|upper }}</div>
-                  {{ p.nom_enfant }}
+                  <div class="avatar-circle me-3">{{ item.child.nom[0]|upper }}</div>
+                  {{ item.child.nom }}
                 </div>
               </td>
-              <td>{{ p.date }}</td>
-              <td class="text-end pe-4">
-                {% if p.statut == 'present' %}
+              <td class="text-center">
+                {% if item.status == 'present' %}
                 <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Présent</span>
-                {% elif p.statut == 'absent' %}
+                {% elif item.status == 'absent' %}
                 <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Absent</span>
+                {% elif item.status == 'retard' %}
+                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">En retard</span>
                 {% else %}
-                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ p.statut|capitalize
-                  }}</span>
+                <span class="badge bg-secondary bg-opacity-10 text-muted rounded-pill px-3">Non défini</span>
                 {% endif %}
               </td>
+              <td class="text-center text-muted small">{{ item.presence.heure_arrivee if item.presence and
+                item.presence.heure_arrivee else '-' }}</td>
+              <td class="text-center text-muted small">{{ item.presence.heure_depart if item.presence and
+                item.presence.heure_depart else '-' }}</td>
+
+              {% if current_user.role == 'educateur' or current_user.role == 'admin' %}
+              <td class="text-end pe-4">
+                {% if item.presence %}
+                <a href="{{ url_for('presence_bp.list_presences', date=date, edit_id=item.presence._id) }}"
+                  class="btn btn-sm btn-outline-warning">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% else %}
+                <span class="text-muted small">-</span>
+                {% endif %}
+              </td>
+              {% endif %}
             </tr>
             {% else %}
             <tr>
-              <td colspan="3" class="text-center py-5 text-muted">Aucune présence enregistrée pour cette date.</td>
+              <td colspan="5" class="text-center py-5 text-muted">Aucun enfant trouvé.</td>
             </tr>
             {% endfor %}
           </tbody>

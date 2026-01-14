@@ -27,24 +27,37 @@ def add_activite():
         flash("Activité ajoutée avec succès", "success")
     return redirect(url_for("activites_bp.list_activites"))
 
-@activites_bp.route("/edit/<id>", methods=["POST"])
+@activites_bp.route("/edit/<id>", methods=["GET", "POST"])
 @role_required(['educateur', 'admin'])
 def edit_activite(id):
-    titre = request.form.get("titre")
-    description = request.form.get("description","")
-    date = request.form.get("date","")
+    act = db.activites.find_one({"_id": ObjectId(id)})
+    if not act:
+        flash("Activité introuvable", "error")
+        return redirect(url_for("activites_bp.list_activites"))
+
+    if request.method == "POST":
+        titre = request.form.get("titre")
+        description = request.form.get("description","")
+        date = request.form.get("date","")
+        
+        if titre:
+            db.activites.update_one(
+                {"_id": ObjectId(id)},
+                {"$set": {
+                    "titre": titre,
+                    "description": description,
+                    "date": date
+                }}
+            )
+            flash("Activité modifiée avec succès", "success")
+        return redirect(url_for("activites_bp.list_activites"))
     
-    if titre:
-        db.activites.update_one(
-            {"_id": ObjectId(id)},
-            {"$set": {
-                "titre": titre,
-                "description": description,
-                "date": date
-            }}
-        )
-        flash("Activité modifiée avec succès", "success")
-    return redirect(url_for("activites_bp.list_activites"))
+    # GET: Render list with edit context
+    acts = list(db.activites.find().sort("date", 1))
+    for a in acts:
+        a['_id'] = str(a['_id'])
+        
+    return render_template("activites.html", activites=acts, activite_to_edit=act)
 
 @activites_bp.route("/delete/<id>")
 @role_required(['admin', 'educateur'])

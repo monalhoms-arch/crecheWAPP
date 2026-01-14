@@ -26,6 +26,10 @@ def add_parent():
 @parents_bp.route("/edit/<id>", methods=["GET","POST"])
 @admin_required
 def edit_parent(id):
+    parent = db.parents.find_one({"_id": ObjectId(id)})
+    if not parent:
+        return redirect(url_for("parents_bp.list_parents"))
+
     if request.method == "POST":
         db.parents.update_one({"_id": ObjectId(id)}, {"$set": {
             "nom": request.form.get("nom"),
@@ -33,8 +37,10 @@ def edit_parent(id):
             "telephone": request.form.get("telephone","")
         }})
         return redirect(url_for("parents_bp.list_parents"))
-    parent = db.parents.find_one({"_id": ObjectId(id)})
-    return render_template("parents_edit.html", parent=parent)
+    
+    # Render main view with edit context
+    parents = list(db.parents.find().sort("_id", -1))
+    return render_template("parents.html", parents=parents, parent_to_edit=parent)
 
 @parents_bp.route("/delete/<id>")
 @admin_required
