@@ -144,4 +144,7 @@ def index():
     return render_template("index.html", stats=stats)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Disable the automatic reloader when running under the VS Code debugger.
+    # The reloader tries to re-import the module by name which conflicts
+    # with the local `app` package directory and raises SystemExit(1).
+    app.run(debug=True, use_reloader=False)

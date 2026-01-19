@@ -28,6 +28,17 @@ def login():
             )
             
             if user_obj.check_password(password):
+                # If the stored hash used scrypt, re-hash to the project's
+                # default (Werkzeug's generate_password_hash) to avoid
+                # expensive scrypt checks on future logins.
+                try:
+                    if user_data.get('password_hash', '').startswith('scrypt'):
+                        user_obj.set_password(password)
+                        users_collection.update_one({'_id': user_data['_id']}, {'$set': {'password_hash': user_obj.password_hash}})
+                except Exception:
+                    # non-fatal: if re-hash/update fails, continue login
+                    pass
+
                 login_user(user_obj)
                 next_page = request.args.get('next')
                 return redirect(next_page or url_for('index'))
